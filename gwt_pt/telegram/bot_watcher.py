@@ -12,6 +12,8 @@ from socket import timeout
 import random
 #import resource
 from gwt_pt.util import config_loader
+from gwt_pt.datasource import ibkr 
+from gwt_pt.charting import frameplot 
 
 # Load static properties
 config = config_loader.load()
@@ -35,27 +37,50 @@ def on_chat_message(msg):
         bot.sendMessage(chat_id, random.choice(LOADING), parse_mode='HTML')
         bot.sendMessage(chat_id, "Test", parse_mode='HTML')
         
-    elif (command == "/fxEU"):
+    elif (command.startswith("/fx")):
+    
+        try:            
+            cmds = command.split(' ')
+            quote = cmds[0]
+            params = cmds[1:]
+        except IndexError:
+            params = []
+            
+        print("Quote: " + quote)
+        print("Param: " + str(params))
+    
+        action = quote[2:3]
+        code = quote[3:]
+        codes = [code] + params
+        print(codes)
         
         bot.sendMessage(chat_id, random.choice(LOADING), parse_mode='HTML')         
         try:
-            #result = stock_history.get_stocks_rs_charts([code] + params)
-            #chartpath = result[0]
-            #invalidcodelist = result[1]
-            chartpath="#"
-            print("Chart Path: [" + chartpath + "]")
+        
+            if (len(code) == 0):
+                 bot.sendMessage(chat_id, 'Sample: /fxEURUSD /fxUSDJPY', parse_mode='HTML')
+            elif (len(code) != 6):
+                bot.sendMessage(chat_id, u'\U000026D4' + ' Invalid Symbol:' + code, parse_mode='HTML')
+            else:
+                symbol = code[0:3]
+                currency = code[3:6]
+
+                duration = "2 M"
+                period = "4 hours"
+                title = symbol + "/" + currency + " " + period                
+                chartpath= frameplot.plot(ibkr.get_data(symbol, currency, duration, period), title, True)
+                print("Chart Path: [" + chartpath + "]")
+                bot.sendPhoto(chat_id=chat_id, photo=open(chartpath, 'rb'))   
 
         except Exception as e:
             print("Exception raised: [" + str(e) +  "]")
             bot.sendMessage(chat_id, u'\U000026D4' + ' ' + str(e), parse_mode='HTML')
-        else:
-            bot.sendPhoto(chat_id=chat_id, photo=open(chartpath, 'rb'))      
         return
 
     elif (command.startswith("/")):    
     
         menuitemlist = [{'command': '/test', 'desc': 'Test', 'icon': u'\U0001F4B9'},
-                        {'command': '/fx[FX_SYM]', 'desc': 'FX Chart', 'icon': u'\U0001F310'},\
+                        {'command': '/fx[AAABBB]', 'desc': 'FX Chart (e.g. /fxEURUSD /fxUSDJPY', 'icon': u'\U0001F310'},\
         ]
         
         menu = '金鑊鏟 PT Bot v0.1 '
