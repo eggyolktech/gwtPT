@@ -277,6 +277,10 @@ def get_data(symbol, currency, duration = "2 M", period = "4 hours"):
     resolved_ibcontract=app.resolve_ib_contract(ibcontract)
 
     historic_data = app.get_IB_historical_data(resolved_ibcontract, duration, period)
+    #print(historic_data)
+    
+    out_tup = [i for i in historic_data if "06:15" not in i[0]]
+    historic_data = out_tup
     
     try:
         app.disconnect()
