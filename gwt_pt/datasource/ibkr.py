@@ -262,7 +262,7 @@ class TestApp(TestWrapper, TestClient):
 
 def get_data(symbol, currency, duration = "2 M", period = "4 hours"): 
 
-    app = TestApp("127.0.0.1", 4001, 1)
+    app = TestApp("127.0.0.1", 4002, 1)
 
     ibcontract = IBcontract()
     #ibcontract.lastTradeDateOrContractMonth="201809"
@@ -279,8 +279,7 @@ def get_data(symbol, currency, duration = "2 M", period = "4 hours"):
     historic_data = app.get_IB_historical_data(resolved_ibcontract, duration, period)
     #print(historic_data)
     
-    out_tup = [i for i in historic_data if "06:15" not in i[0]]
-    historic_data = out_tup
+    #historic_data = out_tup
     
     try:
         app.disconnect()
