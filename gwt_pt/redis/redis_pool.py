@@ -28,7 +28,7 @@ def main():
     end = datetime.today()
     start = end - timedelta(days=(1*365))
     
-    setV("Winston", "test")
+    #setV("Winston", "test")
     print(getV("Winston"))
 
 if __name__ == "__main__":

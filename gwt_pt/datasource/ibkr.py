@@ -23,6 +23,7 @@ from ibapi.contract import Contract as IBcontract
 from threading import Thread
 import queue
 import datetime
+from gwt_pt.datasource import resample
 
 DEFAULT_HISTORIC_DATA_ID=50
 DEFAULT_GET_CONTRACT_ID=43
@@ -31,6 +32,12 @@ DEFAULT_GET_CONTRACT_ID=43
 FINISHED = object()
 STARTED = object()
 TIME_OUT = object()
+
+FILTER_DICT = {
+    "4 hours": "06:15",
+    "1 hour": "05:15"
+}
+
 
 class finishableQueue(object):
 
@@ -262,7 +269,9 @@ class TestApp(TestWrapper, TestClient):
 
 def get_data(symbol, currency, duration = "2 M", period = "4 hours"): 
 
-    app = TestApp("127.0.0.1", 4002, 1)
+    ip = "127.0.0.1"
+    ip = "13.250.58.82"
+    app = TestApp("13.250.58.82", 4002, 1)
 
     ibcontract = IBcontract()
     #ibcontract.lastTradeDateOrContractMonth="201809"
@@ -279,7 +288,8 @@ def get_data(symbol, currency, duration = "2 M", period = "4 hours"):
     historic_data = app.get_IB_historical_data(resolved_ibcontract, duration, period)
     #print(historic_data)
     
-    #historic_data = out_tup
+    out_tup = resample.filter_data(historic_data, FILTER_DICT[period])
+    historic_data = out_tup
     
     try:
         app.disconnect()

@@ -4,7 +4,7 @@ import datetime
 from datetime import tzinfo, timedelta, datetime
 import time
 import os
-
+import numpy as np
 import traceback
 import logging
 import sys
@@ -87,6 +87,7 @@ def FASTSTOC(df, column_low="low", column_high="high", column_close="close", per
     
     d_fast = SMA(k_fast, "k_fast", smoothing)
     d_fast = d_fast.to_frame('d_fast')
+    d_fast = np.round(d_fast, 6)
     
     if debug:
         print("KFFFFFFFFFFFF================================================")
