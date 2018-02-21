@@ -6,6 +6,8 @@ import os
 from pandas_datareader import data as web, wb
 from gwt_pt.common.indicator import SMA, EMA, RSI, FASTSTOC, SLOWSTOC, MACD
 
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.dates import DateFormatter
 import matplotlib.ticker as ticker
@@ -236,7 +238,7 @@ def plot(historic_data, title, isFile=False):
             tstr = "42"
             chartpath = "/var/www/eggyolk.tech/html/gwtpt/" + 'pchart' + tstr + '.png'
         else:
-            chartpath = "C:\\Temp\\gwtpt\\" + 'gchart' + str(int(round(time.time() * 1000))) + '.png'
+            chartpath = "C:\\Temp\\gwtpt\\" + 'pchart' + str(int(round(time.time() * 1000))) + '.png'
         
         plt.savefig(chartpath, bbox_inches='tight')
         return chartpath 
