@@ -232,7 +232,9 @@ def plot(historic_data, title, isFile=False):
     plt.tight_layout(w_pad=3, h_pad=3)
     if (isFile):
         if not os.name == 'nt':
-            chartpath = "/tmp/gwtpt/" + 'gchart' + str(int(round(time.time() * 1000))) + '.png'
+            tstr = str(int(round(time.time() * 1000)))
+            tstr = "42"
+            chartpath = "/var/www/eggyolk.tech/html/gwtpt/" + 'pchart' + tstr + '.png'
         else:
             chartpath = "C:\\Temp\\gwtpt\\" + 'gchart' + str(int(round(time.time() * 1000))) + '.png'
         
@@ -252,7 +254,7 @@ def main():
     period = "4 hours"
     title = symbol + "/" + currency + " " + period
 
-    print(plot(ibkr.get_data(symbol, currency, duration, period), title, False))
+    print(plot(ibkr.get_data(symbol, currency, duration, period), title, True))
 
 if __name__ == "__main__":
     main() 
