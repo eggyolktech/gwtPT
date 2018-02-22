@@ -35,12 +35,6 @@ FINISHED = object()
 STARTED = object()
 TIME_OUT = object()
 
-FILTER_DICT = {
-    "4 hours": "06:15",
-    "1 hour": "05:15"
-}
-
-
 class finishableQueue(object):
 
     def __init__(self, queue_to_finish):
@@ -290,7 +284,7 @@ def get_data(symbol, currency, duration = "2 M", period = "4 hours"):
     historic_data = app.get_IB_historical_data(resolved_ibcontract, duration, period)
     #print(historic_data)
     
-    out_tup = resample.filter_data(historic_data, FILTER_DICT[period])
+    out_tup = resample.filter_data(historic_data, period)
     historic_data = out_tup
     
     try:

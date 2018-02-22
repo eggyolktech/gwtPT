@@ -11,14 +11,17 @@ import time
 import datetime
 
 FILTER_DICT = {
-    "4 hours": "06:15",
-    "1 hour": "05:15"
+    "4 hours": ["06:15", "22:15"],
+    "1 hour": ["05:15"]
 }
 
-def filter_data(ib_tuples, filter):
+def filter_data(ib_tuples, period):
+
+    filter = FILTER_DICT[period]
 
     if filter:
-        ib_tuples = [i for i in ib_tuples if filter not in i[0]]
+        for f in filter:
+            ib_tuples = [i for i in ib_tuples if f not in i[0]]
 
     # Data pre-processing
     #historic_df = pd.DataFrame(ib_tuples, columns=['datetime', 'open', 'high', 'low', 'close', 'volume'])

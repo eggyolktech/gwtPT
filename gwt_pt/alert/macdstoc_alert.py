@@ -1,0 +1,161 @@
+#! /usr/bin/python
+
+import numpy as np
+import pandas as pd
+import os
+from pandas_datareader import data as web, wb
+from gwt_pt.common.indicator import SMA, EMA, RSI, FASTSTOC, SLOWSTOC, MACD
+
+from gwt_pt.datasource import ibkr 
+from gwt_pt.telegram import bot_sender
+from gwt_pt.charting import frameplot
+
+import time
+import datetime
+
+EL = "\n"
+DEL = "\n\n"
+
+STOC_UPPER_LIMIT = 75
+STOC_LOWER_LIMIT = 25
+STOC_WINDOW = 16
+MACD_WINDOW = 12 
+MACDSTOC_WINDOW = 11
+MACDSTOC_UPPER_LIMIT = 95
+MACDSTOC_LOWER_LIMIT = 5
+
+MONITOR_PERIOD = 20
+
+def get_alert(title, historic_data): 
+    
+    # Set float format
+    #pd.options.display.float_format = "{:.9f}".format
+    
+    # Data pre-processing
+    historic_df = pd.DataFrame(historic_data, columns=['datetime', 'open', 'high', 'low', 'close', 'volume'])
+    historic_df.set_index('datetime', inplace=True)
+    historic_df.index = pd.to_datetime(historic_df.index)
+
+    signals = pd.DataFrame(index=historic_df.index)
+    signals['open'] = historic_df['open']    
+    signals['high'] = historic_df['high']
+    signals['low'] = historic_df['low']
+    signals['close'] = historic_df['close']
+    signals["ema25"] = EMA(signals, 'close', 25)
+
+    # MACD
+    macd = MACD(historic_df['close'])
+    signals = pd.concat([signals, macd], axis=1)
+
+    # Slowstoc
+    kslow, dslow = SLOWSTOC(historic_df, 'low', 'high', 'close', STOC_WINDOW, 8, False)
+    signals = pd.concat([signals, kslow, dslow], axis=1)
+
+    # Super Macdstoc
+    skslow, sdslow = FASTSTOC(signals, "macd", "macd", "macd", MACDSTOC_WINDOW, 3, False)
+    skslow = skslow.rename(columns = {'k_fast':'sk_slow'})
+    sdslow = sdslow.rename(columns = {'d_fast':'sd_slow'})
+    signals = pd.concat([signals, skslow, sdslow], axis=1)
+    
+    # Xover Mark
+    signals['signal_stoc_xup'] = 0.0
+    signals['signal_stoc_xdown'] = 0.0
+    signals['signal_macd_xup'] = 0.0
+    signals['signal_macd_xdown'] = 0.0
+    signals['signal_macdstoc_xup'] = 0.0
+    signals['signal_macdstoc_xdown'] = 0.0    
+
+    ###############################################################################
+    ## Create a 'signal' for Slow Stoc cross over <=25    
+    if (len(signals) >= STOC_WINDOW):
+        signals['signal_stoc_xup'][STOC_WINDOW:] = np.where(
+            (signals['k_slow'][STOC_WINDOW:] > signals['d_slow'][STOC_WINDOW:])
+            & (signals['k_slow'][STOC_WINDOW:] <= STOC_LOWER_LIMIT)
+            , 1.0, 0.0)
+    else:
+        signals['signal_stoc_xup'] = 0.0
+    
+    ## Take the difference of the signals in order to generate actual trading orders
+    signals['stoc_xup_positions'] = signals['signal_stoc_xup'].diff()
+    signals.loc[signals.stoc_xup_positions == -1.0, 'stoc_xup_positions'] = 0.0    
+    
+    ###############################################################################
+    ## Create a 'signal' for Macdstoc cross up <=5
+    if (len(signals) >= MACDSTOC_WINDOW):
+        signals['signal_macdstoc_xup'][MACDSTOC_WINDOW:] = np.where(
+            (signals['sk_slow'][MACDSTOC_WINDOW:] > signals['sd_slow'][MACDSTOC_WINDOW:])
+            & (signals['sd_slow'][MACDSTOC_WINDOW:] <= MACDSTOC_LOWER_LIMIT)
+            , 1.0, 0.0)
+    else:
+        signals['signal_macdstoc_xup'] = 0.0
+    
+    ## Take the difference of the signals in order to generate actual trading orders
+    signals['macdstoc_xup_positions'] = signals['signal_macdstoc_xup'].diff()
+    signals.loc[signals.macdstoc_xup_positions == -1.0, 'macdstoc_xup_positions'] = 0.0
+ 
+    ## Create a 'signal' for Macdstoc cross down >=95
+    if (len(signals) >= MACDSTOC_WINDOW):
+        signals['signal_macdstoc_xdown'][MACDSTOC_WINDOW:] = np.where(
+            (signals['sk_slow'][MACDSTOC_WINDOW:] < signals['sd_slow'][MACDSTOC_WINDOW:])
+            & (signals['sd_slow'][MACDSTOC_WINDOW:] >= MACDSTOC_UPPER_LIMIT)
+            , 1.0, 0.0)
+    else:
+        signals['signal_macdstoc_xdown'] = 0.0
+    
+    ## Take the difference of the signals in order to generate actual trading orders
+    signals['macdstoc_xdown_positions'] = signals['signal_macdstoc_xdown'].diff()
+    signals.loc[signals.macdstoc_xdown_positions == -1.0, 'macdstoc_xdown_positions'] = 0.0
+    
+    latest_signal = signals.tail(1)
+    lts = latest_signal.index[0]
+    lxup = int(latest_signal.iloc[0]['macdstoc_xup_positions'])
+    lxdown = int(latest_signal.iloc[0]['macdstoc_xdown_positions'])
+    
+    message_tmpl = "<b>" + u'\U0001F514' + "%s: MACDSTOC X%s</b>\n<i>at %s</i>"
+    message_nil_tmpl = "%s: NO MACDSTOC Alert at %s"
+    message = ""    
+    
+    if (lxup):
+        message = (message_tmpl % (title, "Up", lts))
+        filepath = frameplot.plot_macdstoc_signals(historic_df, signals, title, True)
+        filename = filepath.split("/")[-1]
+        message = message + " (<a href='http://www.eggyolk.tech/gwtpt/%s' target='_blank'>Chart</a>)" % filename        
+    elif (lxdown):
+        message = (message_tmpl % (title, "Down", lts))
+        filepath = frameplot.plot_macdstoc_signals(historic_df, signals, title, True)
+        filename = filepath.split("/")[-1]
+        message = message + " (<a href='http://www.eggyolk.tech/gwtpt/%s' target='_blank'>Chart</a>)" % filename
+    else:
+        print(message_nil_tmpl % (title, lts))
+        
+    if (message):
+        bot_sender.broadcast(message, True)
+    
+    #print(signals.info())
+    #print(signals.to_string())
+    #print(signals.tail())
+    print(signals[['sk_slow','sd_slow', 'macdstoc_xup_positions', 'macdstoc_xdown_positions']].to_string())
+
+
+def main():
+    
+    passage = "Generation of Macdstoc Alert............."
+    print(passage)
+    
+    #CURRENCY_PAIR = ["EUR/USD", "GBP/USD", "USD/JPY", "EUR/JPY", "GBP/JPY", "EUR/GBP", "USD/CAD", "AUS/USD", "NZD/USD"]    
+    CURRENCY_PAIR = ["EUR/USD", "GBP/USD", "USD/JPY"]
+
+    for cur in CURRENCY_PAIR:
+    
+        symbol = cur.split("/")[0]
+        currency = cur.split("/")[1]
+        duration = "1 M"
+        period = "4 hours"
+        title = symbol + "/" + currency + "@" + period
+        print("Checking on " + title + " ......")
+
+        hist_data = ibkr.get_data(symbol, currency, duration, period)
+        get_alert(title, hist_data[:-4])
+
+if __name__ == "__main__":
+    main() 
