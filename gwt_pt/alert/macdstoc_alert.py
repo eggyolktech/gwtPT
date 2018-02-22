@@ -142,8 +142,8 @@ def main():
     passage = "Generation of Macdstoc Alert............."
     print(passage)
     
-    #CURRENCY_PAIR = ["EUR/USD", "GBP/USD", "USD/JPY", "EUR/JPY", "GBP/JPY", "EUR/GBP", "USD/CAD", "AUS/USD", "NZD/USD"]    
-    CURRENCY_PAIR = ["EUR/USD", "GBP/USD", "USD/JPY"]
+    CURRENCY_PAIR = ["EUR/USD", "GBP/USD", "USD/JPY", "EUR/JPY", "GBP/JPY", "EUR/GBP", "USD/CAD", "AUD/USD", "NZD/USD"]    
+    #CURRENCY_PAIR = ["EUR/USD", "GBP/USD", "USD/JPY"]
 
     for cur in CURRENCY_PAIR:
     
@@ -155,7 +155,8 @@ def main():
         print("Checking on " + title + " ......")
 
         hist_data = ibkr.get_data(symbol, currency, duration, period)
-        get_alert(title, hist_data[:-4])
+        get_alert(title, hist_data)
+        time.sleep(8)
 
 if __name__ == "__main__":
     main() 
