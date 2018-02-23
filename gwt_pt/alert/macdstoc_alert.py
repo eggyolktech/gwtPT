@@ -156,7 +156,7 @@ def main():
 
         hist_data = ibkr.get_data(symbol, currency, duration, period)
         get_alert(title, hist_data)
-        print("Sleeping for " + SLEEP_PERIOD + " seconds")
+        print("Sleeping for " + str(SLEEP_PERIOD) + " seconds...")
         time.sleep(SLEEP_PERIOD)
 
 if __name__ == "__main__":

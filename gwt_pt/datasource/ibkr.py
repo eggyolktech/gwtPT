@@ -26,6 +26,7 @@ from threading import Thread
 import queue
 import datetime
 from gwt_pt.datasource import resample
+from gwt_pt.util import config_loader
 
 DEFAULT_HISTORIC_DATA_ID=50
 DEFAULT_GET_CONTRACT_ID=43
@@ -263,12 +264,18 @@ class TestApp(TestWrapper, TestClient):
 
         self.init_error()
 
-def get_data(symbol, currency, duration = "2 M", period = "4 hours"): 
+def get_data(symbol, currency, duration = "2 M", period = "4 hours", is_simulated=False): 
 
-    ip = "127.0.0.1"
-    ip = "13.250.58.82"
-    app = TestApp("13.250.58.82", 4002, 1)
+    config = config_loader.load()
 
+    ip = config.get("ib-gateway","ip")
+    #ip = "127.0.0.1"
+    
+    if (is_simulated):
+        app = TestApp(ip, 4002, 1)
+    else:
+        app = TestApp(ip, 4001, 1)
+        
     ibcontract = IBcontract()
     #ibcontract.lastTradeDateOrContractMonth="201809"
     #ibcontract.secType = "FUT"
