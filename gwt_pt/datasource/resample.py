@@ -31,7 +31,7 @@ def filter_data(ib_tuples, period):
     #print(historic_df.to_string())
     #print(historic_df)
     #print(historic_df['open'].groupby(historic_df['open'].index // 4 * 4).sum())
-    print(ib_tuples) 
+    #print(ib_tuples) 
     return ib_tuples
 
 

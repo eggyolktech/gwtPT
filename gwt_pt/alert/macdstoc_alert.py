@@ -130,12 +130,12 @@ def get_alert(title, historic_data):
         print(message_nil_tmpl % (title, lts))
         
     if (message):
-        bot_sender.broadcast(message, True)
+        bot_sender.broadcast(message, False)
     
     #print(signals.info())
     #print(signals.to_string())
     #print(signals.tail())
-    print(signals[['sk_slow','sd_slow', 'macdstoc_xup_positions', 'macdstoc_xdown_positions']].to_string())
+    print(signals[['sk_slow','sd_slow', 'macdstoc_xup_positions', 'macdstoc_xdown_positions']].tail().to_string())
 
 def main():
     
