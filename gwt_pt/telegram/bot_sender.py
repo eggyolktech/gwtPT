@@ -67,7 +67,7 @@ def main():
     passage = "Test"
 
     # Send a message to a chat room (chat room ID retrieved from getUpdates)
-    broadcast(passage, True)
+    broadcast(passage, False)
 
 if __name__ == "__main__":
     main()
