@@ -25,6 +25,7 @@ MACDSTOC_UPPER_LIMIT = 95
 MACDSTOC_LOWER_LIMIT = 5
 
 MONITOR_PERIOD = 20
+SLEEP_PERIOD = 8
 
 def get_alert(title, historic_data): 
     
@@ -136,7 +137,6 @@ def get_alert(title, historic_data):
     #print(signals.tail())
     print(signals[['sk_slow','sd_slow', 'macdstoc_xup_positions', 'macdstoc_xdown_positions']].to_string())
 
-
 def main():
     
     passage = "Generation of Macdstoc Alert............."
@@ -156,7 +156,8 @@ def main():
 
         hist_data = ibkr.get_data(symbol, currency, duration, period)
         get_alert(title, hist_data)
-        time.sleep(8)
+        print("Sleeping for " + SLEEP_PERIOD + " seconds")
+        time.sleep(SLEEP_PERIOD)
 
 if __name__ == "__main__":
     main() 

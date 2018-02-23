@@ -11,7 +11,7 @@ import time
 import datetime
 
 FILTER_DICT = {
-    "4 hours": ["06:15", "22:15"],
+    "4 hours": ["06:15", "18:15", "22:15"],
     "1 hour": ["05:15"]
 }
 
