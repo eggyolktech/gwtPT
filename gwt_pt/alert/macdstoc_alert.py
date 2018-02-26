@@ -130,7 +130,7 @@ def get_alert(title, historic_data):
         print(message_nil_tmpl % (title, lts))
         
     if (message):
-        bot_sender.broadcast(message, False)
+        bot_sender.broadcast(message, True)
     
     #print(signals.info())
     #print(signals.to_string())
@@ -142,7 +142,8 @@ def main():
     passage = "Generation of Macdstoc Alert............."
     print(passage)
     
-    CURRENCY_PAIR = ["EUR/USD", "GBP/USD", "USD/JPY", "EUR/JPY", "GBP/JPY", "EUR/GBP", "USD/CAD", "AUD/USD", "NZD/USD"]    
+    CURRENCY_PAIR = ["EUR/USD", "GBP/USD", "USD/JPY", "EUR/JPY", "GBP/JPY", "EUR/GBP", "USD/CAD", "AUD/USD", "NZD/USD", "USD/CHF", "AUD/NZD", "USD/NOK", "USD/SEK", "USD/SGD", "USD/ZAR"
+    ]    
     #CURRENCY_PAIR = ["EUR/USD", "GBP/USD", "USD/JPY"]
 
     for cur in CURRENCY_PAIR:
@@ -150,7 +151,8 @@ def main():
         symbol = cur.split("/")[0]
         currency = cur.split("/")[1]
         duration = "1 M"
-        period = "4 hours"
+        #period = "4 hours"
+        period = "1 hour"
         title = symbol + "/" + currency + "@" + period
         print("Checking on " + title + " ......")
 

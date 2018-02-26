@@ -285,7 +285,7 @@ class TestApp(TestWrapper, TestClient):
 
 #if __name__ == '__main__':
 
-app = TestApp("127.0.0.1", 4001, 1)
+app = TestApp("13.250.58.82", 4001, 1)
 
 ibcontract = IBcontract()
 #ibcontract.lastTradeDateOrContractMonth="201809"
