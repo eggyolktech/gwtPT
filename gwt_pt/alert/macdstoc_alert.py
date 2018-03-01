@@ -21,8 +21,10 @@ STOC_LOWER_LIMIT = 25
 STOC_WINDOW = 16
 MACD_WINDOW = 12 
 MACDSTOC_WINDOW = 11
-MACDSTOC_UPPER_LIMIT = 95
-MACDSTOC_LOWER_LIMIT = 5
+#MACDSTOC_UPPER_LIMIT = 95
+#MACDSTOC_LOWER_LIMIT = 5
+MACDSTOC_UPPER_LIMIT = 0
+MACDSTOC_LOWER_LIMIT = 100
 
 MONITOR_PERIOD = 20
 SLEEP_PERIOD = 8
@@ -111,18 +113,20 @@ def get_alert(title, historic_data):
     lts = latest_signal.index[0]
     lxup = int(latest_signal.iloc[0]['macdstoc_xup_positions'])
     lxdown = int(latest_signal.iloc[0]['macdstoc_xdown_positions'])
-    
-    message_tmpl = "<b>" + u'\U0001F514' + "%s: MACDSTOC X%s</b>\n<i>at %s</i>"
+    lkslow = "%.2f" % latest_signal.iloc[0]['sk_slow']
+    ldslow = "%.2f" % latest_signal.iloc[0]['sd_slow']
+           
+    message_tmpl = "<b>" + u'\U0001F514' + "%s: MACDSTOC X%s</b>\n<i>at %s</i>\n<b>K:</b> %s, <b>D:</b> %s"
     message_nil_tmpl = "%s: NO MACDSTOC Alert at %s"
     message = ""    
     
     if (lxup):
-        message = (message_tmpl % (title, "Up", lts))
+        message = (message_tmpl % (title, "Up", lts, lkslow, ldslow))
         filepath = frameplot.plot_macdstoc_signals(historic_df, signals, title, True)
         filename = filepath.split("/")[-1]
         message = message + " (<a href='http://www.eggyolk.tech/gwtpt/%s' target='_blank'>Chart</a>)" % filename        
     elif (lxdown):
-        message = (message_tmpl % (title, "Down", lts))
+        message = (message_tmpl % (title, "Down", lts, lkslow, ldslow))
         filepath = frameplot.plot_macdstoc_signals(historic_df, signals, title, True)
         filename = filepath.split("/")[-1]
         message = message + " (<a href='http://www.eggyolk.tech/gwtpt/%s' target='_blank'>Chart</a>)" % filename
