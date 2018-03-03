@@ -115,39 +115,64 @@ def get_alert(title, historic_data):
     lxdown = int(latest_signal.iloc[0]['macdstoc_xdown_positions'])
     lkslow = "%.2f" % latest_signal.iloc[0]['sk_slow']
     ldslow = "%.2f" % latest_signal.iloc[0]['sd_slow']
+    
+    lopen = "%.4f" % latest_signal.iloc[0]['open']
+    lhigh = "%.4f" % latest_signal.iloc[0]['high']
+    llow = "%.4f" % latest_signal.iloc[0]['low']
+    lclose = "%.4f" % latest_signal.iloc[0]['close']
+    lmacd = "%.5f" % latest_signal.iloc[0]['macd']
+    lemas = "%.5f" % latest_signal.iloc[0]['emaSmooth']
+    lskslow = "%.2f" % latest_signal.iloc[0]['k_slow']
+    lsdslow = "%.2f" % latest_signal.iloc[0]['d_slow']
            
-    message_tmpl = "<b>" + u'\U0001F514' + "%s: MACDSTOC X%s</b>\n<i>at %s</i>\n<b>K:</b> %s, <b>D:</b> %s"
+    message_tmpl = "<b>" + u'\U0001F514' + "%s: \nMACDSTOC X%s</b>\n<i>at %s</i>"
+    signals_list = ["<b>OPEN:</b> " + lopen
+                    , "<b>HIGH:</b> " + lhigh
+                    , "<b>LOW:</b> " + llow
+                    , "<b>CLOSE:</b> " + lclose
+                    , "<b>MACD:</b> " + lmacd
+                    , "<b>emaSmooth:</b> " + lemas
+                    , "<b>STOC_K:</b> " + lskslow
+                    , "<b>STOC_D:</b> " + lsdslow
+                    , "<b>MSTOC_K:</b> " + lkslow
+                    , "<b>MSTOC_D:</b> " + ldslow
+                    ]
+    signals_stmt = EL.join(signals_list)
     message_nil_tmpl = "%s: NO MACDSTOC Alert at %s"
     message = ""    
     
     if (lxup):
-        message = (message_tmpl % (title, "Up", lts, lkslow, ldslow))
+        message = (message_tmpl % (title, "Up", lts))
         filepath = frameplot.plot_macdstoc_signals(historic_df, signals, title, True)
         filename = filepath.split("/")[-1]
-        message = message + " (<a href='http://www.eggyolk.tech/gwtpt/%s' target='_blank'>Chart</a>)" % filename        
+        message = message + " (<a href='http://www.eggyolk.tech/gwtpt/%s' target='_blank'>Chart</a>)" % filename 
+        message = message + DEL + signals_stmt
     elif (lxdown):
-        message = (message_tmpl % (title, "Down", lts, lkslow, ldslow))
+        message = (message_tmpl % (title, "Down", lts))
         filepath = frameplot.plot_macdstoc_signals(historic_df, signals, title, True)
         filename = filepath.split("/")[-1]
         message = message + " (<a href='http://www.eggyolk.tech/gwtpt/%s' target='_blank'>Chart</a>)" % filename
+        message = message + DEL + signals_stmt
     else:
         print(message_nil_tmpl % (title, lts))
         
     if (message):
-        bot_sender.broadcast(message, True)
+        bot_sender.broadcast(message, False)
     
     #print(signals.info())
     #print(signals.to_string())
     #print(signals.tail())
     print(signals[['sk_slow','sd_slow', 'macdstoc_xup_positions', 'macdstoc_xdown_positions']].tail().to_string())
+    #print(signals.tail().to_string())
 
 def main():
     
     passage = "Generation of Macdstoc Alert............."
     print(passage)
     
-    CURRENCY_PAIR = ["EUR/USD", "GBP/USD", "USD/JPY", "EUR/JPY", "GBP/JPY", "EUR/GBP", "USD/CAD", "AUD/USD", "NZD/USD", "USD/CHF", "AUD/NZD", "USD/NOK", "USD/SEK", "USD/SGD", "USD/ZAR"
-    ]    
+    CURRENCY_PAIR = ["EUR/USD"]
+    
+    #CURRENCY_PAIR = ["EUR/USD", "GBP/USD", "USD/JPY", "EUR/JPY", "GBP/JPY", "EUR/GBP", "USD/CAD", "AUD/USD", "NZD/USD", "USD/CHF", "AUD/NZD", "USD/NOK", "USD/SEK", "USD/SGD", "USD/ZAR"]    
     #CURRENCY_PAIR = ["EUR/USD", "GBP/USD", "USD/JPY"]
 
     for cur in CURRENCY_PAIR:
