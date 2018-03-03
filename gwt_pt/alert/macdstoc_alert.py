@@ -170,8 +170,8 @@ def main():
     passage = "Generation of Macdstoc Alert............."
     print(passage)
     
-    CURRENCY_PAIR = ["EUR/USD"]
-    
+    #CURRENCY_PAIR = ["EUR/USD"]
+    CURRENCY_PAIR = ["EUR/USD", "GBP/USD", "USD/JPY", "EUR/JPY", "GBP/JPY", "EUR/GBP", "USD/CAD", "AUD/USD", "NZD/USD", "USD/CHF", "AUD/NZD", "USD/NOK", "USD/SEK", "USD/SGD"]    
     #CURRENCY_PAIR = ["EUR/USD", "GBP/USD", "USD/JPY", "EUR/JPY", "GBP/JPY", "EUR/GBP", "USD/CAD", "AUD/USD", "NZD/USD", "USD/CHF", "AUD/NZD", "USD/NOK", "USD/SEK", "USD/SGD", "USD/ZAR"]    
     #CURRENCY_PAIR = ["EUR/USD", "GBP/USD", "USD/JPY"]
 
