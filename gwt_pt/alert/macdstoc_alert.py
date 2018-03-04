@@ -51,7 +51,7 @@ def get_alert(title, historic_data):
     signals = pd.concat([signals, macd], axis=1)
 
     # Slowstoc
-    kslow, dslow = SLOWSTOC(historic_df, 'low', 'high', 'close', STOC_WINDOW, 8, False)
+    kslow, dslow = SLOWSTOC(historic_df, 'low', 'high', 'close', STOC_WINDOW, 6, False)
     signals = pd.concat([signals, kslow, dslow], axis=1)
 
     # Super Macdstoc
