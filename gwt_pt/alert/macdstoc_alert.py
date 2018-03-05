@@ -179,7 +179,8 @@ def main():
     
         symbol = cur.split("/")[0]
         currency = cur.split("/")[1]
-        duration = "1 M"
+        #duration = "1 M"
+        duration = "16 D"
         #period = "4 hours"
         period = "1 hour"
         title = symbol + "/" + currency + "@" + period
