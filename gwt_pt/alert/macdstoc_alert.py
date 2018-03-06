@@ -12,6 +12,17 @@ from gwt_pt.charting import frameplot
 
 import time
 import datetime
+import logging, sys
+
+if (os.name == 'nt'):
+    logfile = 'C:\\Users\\Hin\\eggyolktech\\gwtPT\\gwt_pt\\log\\macdstoc_alert.log'
+else:
+    logfile = '/app/gwtPT/gwt_pt/log/macdstoc_alert.log'
+
+logging.basicConfig(filename=logfile, level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
+logger = logging.getLogger()
+sys.stderr.write = lambda s: logger.error(s)
+sys.stdout.write = lambda s: logger.info(s)
 
 EL = "\n"
 DEL = "\n\n"
@@ -163,7 +174,7 @@ def get_alert(title, historic_data):
     #print(signals.info())
     #print(signals.to_string())
     #print(signals.tail())
-    print(signals[['sk_slow','sd_slow', 'macdstoc_xup_positions', 'macdstoc_xdown_positions']].tail().to_string())
+    print(signals[['sk_slow','sd_slow', 'macdstoc_xup_positions', 'macdstoc_xdown_positions']].tail(20).to_string())
     #print(signals.tail().to_string())
 
 def main():
@@ -186,6 +197,7 @@ def main():
                     #"USD/SEK", 
                     "USD/SGD"]
     
+    #CURRENCY_PAIR = ["EUR/USD"]
     METAL_PAIR = ["XAGUSD", "XAUUSD"]
     HKFE_PAIR = ["HSI"]
 
