@@ -25,6 +25,7 @@ MACDSTOC_WINDOW = 11
 #MACDSTOC_LOWER_LIMIT = 5
 MACDSTOC_UPPER_LIMIT = 0
 MACDSTOC_LOWER_LIMIT = 100
+MACDSTOC_THRESHOLD = 1.0
 
 MONITOR_PERIOD = 20
 SLEEP_PERIOD = 8
@@ -86,7 +87,7 @@ def get_alert(title, historic_data):
     ## Create a 'signal' for Macdstoc cross up <=5
     if (len(signals) >= MACDSTOC_WINDOW):
         signals['signal_macdstoc_xup'][MACDSTOC_WINDOW:] = np.where(
-            (signals['sk_slow'][MACDSTOC_WINDOW:] > signals['sd_slow'][MACDSTOC_WINDOW:])
+            (signals['sk_slow'][MACDSTOC_WINDOW:] > signals['sd_slow'][MACDSTOC_WINDOW:] + MACDSTOC_THRESHOLD)
             & (signals['sd_slow'][MACDSTOC_WINDOW:] <= MACDSTOC_LOWER_LIMIT)
             , 1.0, 0.0)
     else:
@@ -99,7 +100,7 @@ def get_alert(title, historic_data):
     ## Create a 'signal' for Macdstoc cross down >=95
     if (len(signals) >= MACDSTOC_WINDOW):
         signals['signal_macdstoc_xdown'][MACDSTOC_WINDOW:] = np.where(
-            (signals['sk_slow'][MACDSTOC_WINDOW:] < signals['sd_slow'][MACDSTOC_WINDOW:])
+            (signals['sk_slow'][MACDSTOC_WINDOW:] < signals['sd_slow'][MACDSTOC_WINDOW:] - MACDSTOC_THRESHOLD)
             & (signals['sd_slow'][MACDSTOC_WINDOW:] >= MACDSTOC_UPPER_LIMIT)
             , 1.0, 0.0)
     else:
@@ -170,23 +171,63 @@ def main():
     passage = "Generation of Macdstoc Alert............."
     print(passage)
     
-    #CURRENCY_PAIR = ["EUR/USD"]
-    CURRENCY_PAIR = ["EUR/USD", "GBP/USD", "USD/JPY", "EUR/JPY", "GBP/JPY", "EUR/GBP", "USD/CAD", "AUD/USD", "NZD/USD", "USD/CHF", "AUD/NZD", "USD/NOK", "USD/SEK", "USD/SGD"]    
-    #CURRENCY_PAIR = ["EUR/USD", "GBP/USD", "USD/JPY", "EUR/JPY", "GBP/JPY", "EUR/GBP", "USD/CAD", "AUD/USD", "NZD/USD", "USD/CHF", "AUD/NZD", "USD/NOK", "USD/SEK", "USD/SGD", "USD/ZAR"]    
-    #CURRENCY_PAIR = ["EUR/USD", "GBP/USD", "USD/JPY"]
+    CURRENCY_PAIR = ["EUR/USD", 
+                    "GBP/USD", 
+                    "USD/JPY", 
+                    "EUR/JPY", 
+                    "GBP/JPY", 
+                    #"EUR/GBP", 
+                    "USD/CAD", 
+                    "AUD/USD", 
+                    "NZD/USD", 
+                    #"USD/CHF", 
+                    #"AUD/NZD", 
+                    #"USD/NOK", 
+                    #"USD/SEK", 
+                    "USD/SGD"]
+    
+    METAL_PAIR = ["XAGUSD", "XAUUSD"]
+    HKFE_PAIR = ["HSI"]
 
     for cur in CURRENCY_PAIR:
     
         symbol = cur.split("/")[0]
         currency = cur.split("/")[1]
-        #duration = "1 M"
         duration = "16 D"
-        #period = "4 hours"
         period = "1 hour"
         title = symbol + "/" + currency + "@" + period
         print("Checking on " + title + " ......")
 
-        hist_data = ibkr.get_data(symbol, currency, duration, period)
+        hist_data = ibkr.get_fx_data(symbol, currency, duration, period)
+        get_alert(title, hist_data)
+        print("Sleeping for " + str(SLEEP_PERIOD) + " seconds...")
+        time.sleep(SLEEP_PERIOD)
+        
+    # Metal Pair
+    for cur in METAL_PAIR:
+
+        symbol = cur
+        duration = "16 D"
+        period = "1 hour"
+        title = symbol + "@" + period
+        print("Checking on " + title + " ......")
+
+        hist_data = ibkr.get_metal_data(symbol, duration, period)
+        get_alert(title, hist_data)
+        print("Sleeping for " + str(SLEEP_PERIOD) + " seconds...")
+        time.sleep(SLEEP_PERIOD)
+        
+    # Futures Pair
+    for cur in HKFE_PAIR:
+
+        symbol = cur
+        duration = "16 D"
+        period = "1 hour"
+        current_mth = datetime.datetime.today().strftime('%Y%m')
+        title = symbol + "@" + period
+        print("Checking on " + title + " ......")
+
+        hist_data = ibkr.get_hkfe_data(current_mth, symbol, duration, period)
         get_alert(title, hist_data)
         print("Sleeping for " + str(SLEEP_PERIOD) + " seconds...")
         time.sleep(SLEEP_PERIOD)

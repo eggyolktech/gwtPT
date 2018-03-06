@@ -264,7 +264,74 @@ class TestApp(TestWrapper, TestClient):
 
         self.init_error()
 
-def get_data(symbol, currency, duration = "2 M", period = "4 hours", is_simulated=False): 
+def get_metal_data(symbol="XAUUSD", duration = "20 D", period = "30 mins", is_simulated=False):    
+
+    config = config_loader.load()
+
+    ip = config.get("ib-gateway","ip")
+    #ip = "127.0.0.1"
+    
+    if (is_simulated):
+        app = TestApp(ip, 4002, 1)
+    else:
+        app = TestApp(ip, 4001, 1)
+        
+    ibcontract = IBcontract()
+    #ibcontract.lastTradeDateOrContractMonth="201803"
+    ibcontract.secType = "CMDTY"
+    ibcontract.symbol = symbol
+    ibcontract.exchange = "SMART"
+    
+    resolved_ibcontract=app.resolve_ib_contract(ibcontract)
+
+    historic_data = app.get_IB_historical_data(resolved_ibcontract, duration, period)
+    #print(historic_data)
+    
+    #out_tup = resample.filter_data(historic_data, period)
+    #historic_data = out_tup
+    
+    try:
+        app.disconnect()
+    except:
+        print("Disconnect with errors (no harm)!")
+
+    return historic_data          
+        
+def get_hkfe_data(contractMonth, symbol="MHI", duration = "20 D", period = "30 mins", is_simulated=False):    
+
+    config = config_loader.load()
+
+    ip = config.get("ib-gateway","ip")
+    #ip = "127.0.0.1"
+    
+    if (is_simulated):
+        app = TestApp(ip, 4002, 1)
+    else:
+        app = TestApp(ip, 4001, 1)
+        
+    ibcontract = IBcontract()
+    #YYYYMM
+    ibcontract.lastTradeDateOrContractMonth=contractMonth
+    ibcontract.secType = "FUT"
+    ibcontract.symbol = symbol
+    ibcontract.exchange = "HKFE"
+ 
+    resolved_ibcontract = app.resolve_ib_contract(ibcontract)
+
+    historic_data = app.get_IB_historical_data(resolved_ibcontract, duration, period)
+    #print(historic_data)
+    
+    #out_tup = resample.filter_data(historic_data, period)
+    #historic_data = out_tup
+    
+    try:
+        app.disconnect()
+    except:
+        print("Disconnect with errors (no harm)!")
+
+    return historic_data     
+        
+def get_fx_data(symbol, currency, duration = "2 M", period = "4 hours", is_simulated=False): 
 
     config = config_loader.load()
 
@@ -303,7 +370,13 @@ def get_data(symbol, currency, duration = "2 M", period = "4 hours", is_simulate
 
 def main():
     
-    print(get_data("EUR", "USD"))
+    #print(get_data("EUR", "USD"))
+    
+    current_mth = datetime.datetime.today().strftime('%Y%m')
+    
+    print(get_hkfe_data(current_mth, "HSI"))
 
+    print(get_metal_data("XAGUSD"))
+    
 if __name__ == "__main__":
     main() 
