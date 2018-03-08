@@ -17,7 +17,7 @@ import logging, sys
 if (os.name == 'nt'):
     logfile = 'C:\\Users\\Hin\\eggyolktech\\gwtPT\\gwt_pt\\log\\macdstoc_alert.log'
 else:
-    logfile = '/app/gwtPT/gwt_pt/log/macdstoc_alert.log'
+    logfile = '/app/gwtPT/gwt_pt/log/macdstoc_alert_%s.log' % datetime.datetime.today().strftime('%m%d-%H%M%S')
 
 logging.basicConfig(filename=logfile, level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 logger = logging.getLogger()
