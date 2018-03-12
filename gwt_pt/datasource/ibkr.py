@@ -374,9 +374,20 @@ def main():
     
     current_mth = datetime.datetime.today().strftime('%Y%m')
     
-    print(get_hkfe_data(current_mth, "HSI"))
+    #print(get_hkfe_data(current_mth, "HSI"))
 
-    print(get_metal_data("XAGUSD"))
+    #print(get_metal_data("XAGUSD"))
     
+    symbol = "HSI"
+    duration = "3 Y"
+    period = "30 mins"
+    current_mth = datetime.datetime.today().strftime('%Y%m')
+    title = symbol + "@" + period
+    print("Checking on " + title + " ......")
+
+    hist_data = get_hkfe_data(current_mth, symbol, duration, period)
+    
+    print(hist_data)
+
 if __name__ == "__main__":
     main() 

@@ -7,7 +7,11 @@ from pandas_datareader import data as web, wb
 from gwt_pt.common.indicator import SMA, EMA, RSI, FASTSTOC, SLOWSTOC, MACD
 
 import matplotlib
-matplotlib.use('Agg')
+
+if not os.name == 'nt':
+    print("Set Display Variable when non-Windows..")
+    matplotlib.use('Agg')
+    
 import matplotlib.pyplot as plt
 from matplotlib.dates import DateFormatter
 import matplotlib.ticker as ticker
@@ -147,6 +151,7 @@ def plot_macdstoc_signals(historic_df, signals, title, isFile=False):
         plt.savefig(chartpath, bbox_inches='tight')
         return chartpath 
     else:
+        print("Plotting Chart.............")
         plt.show()
     
 
@@ -356,11 +361,11 @@ def plot_test(historic_data, title, isFile=False):
     # Plot the figure
     plt.tight_layout(w_pad=3, h_pad=3)
     if (isFile):
-        if not os.name == 'nt':
-            tstr = str(int(round(time.time() * 1000)))
+        tstr = str(int(round(time.time() * 1000)))
+        if not os.name == 'nt':            
             chartpath = "/var/www/eggyolk.tech/html/gwtpt/" + 'pchart' + tstr + '.png'
         else:
-            chartpath = "C:\\Temp\\gwtpt\\" + 'pchart' + str(int(round(time.time() * 1000))) + '.png'
+            chartpath = "C:\\Temp\\gwtpt\\" + 'pchart' + tstr + '.png'
         
         plt.savefig(chartpath, bbox_inches='tight')
         return chartpath 
@@ -378,7 +383,7 @@ def main():
     period = "4 hours"
     title = symbol + "/" + currency + " " + period
 
-    print(plot_test(ibkr.get_data(symbol, currency, duration, period), title, True))
+    plot_test(ibkr.get_fx_data(symbol, currency, duration, period), title, False)
 
 if __name__ == "__main__":
     main() 

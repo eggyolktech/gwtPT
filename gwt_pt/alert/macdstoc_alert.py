@@ -16,8 +16,10 @@ import logging, sys
 
 if (os.name == 'nt'):
     logfile = 'C:\\Users\\Hin\\eggyolktech\\gwtPT\\gwt_pt\\log\\macdstoc_alert.log'
+    testMode = True
 else:
     logfile = '/app/gwtPT/gwt_pt/log/macdstoc_alert_%s.log' % datetime.datetime.today().strftime('%m%d-%H%M%S')
+    testMode = False
 
 logging.basicConfig(filename=logfile, level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 logger = logging.getLogger()
@@ -40,6 +42,21 @@ MACDSTOC_THRESHOLD = 1.0
 
 MONITOR_PERIOD = 20
 SLEEP_PERIOD = 8
+
+
+def write_signals_log(signals_str):
+
+    tstr = str(int(round(time.time() * 1000)))
+    if not os.name == 'nt':        
+        logpath = "/var/www/eggyolk.tech/html/gwtpt/" + 'signals' + tstr + '.txt'
+    else:
+        logpath = "C:\\Temp\\gwtpt\\" + 'signals' + tstr + '.txt'
+        
+    with open(logpath, "w") as text_file:
+        text_file.write(signals_str)
+        
+    return logpath
+
 
 def get_alert(title, historic_data): 
     
@@ -137,45 +154,50 @@ def get_alert(title, historic_data):
     lskslow = "%.2f" % latest_signal.iloc[0]['k_slow']
     lsdslow = "%.2f" % latest_signal.iloc[0]['d_slow']
            
-    message_tmpl = "<b>" + u'\U0001F514' + "%s: \nMACDSTOC X%s</b>\n<i>at %s</i>"
+    message_tmpl = "<b>" + u'\U0001F514' + "%s: \nMACDSTOC X%s</b>\n<i>at %s%s</i>"
     signals_list = ["<b>OPEN:</b> " + lopen
                     , "<b>HIGH:</b> " + lhigh
                     , "<b>LOW:</b> " + llow
                     , "<b>CLOSE:</b> " + lclose
                     , "<b>MACD:</b> " + lmacd
                     , "<b>emaSmooth:</b> " + lemas
-                    , "<b>STOC_K:</b> " + lskslow
-                    , "<b>STOC_D:</b> " + lsdslow
-                    , "<b>MSTOC_K:</b> " + lkslow
-                    , "<b>MSTOC_D:</b> " + ldslow
+                    , "<b>STOC:</b> " + lskslow + "/" + lsdslow
+                    , "<b>MSTOC:</b> " + lkslow + "/" + ldslow
+                    , "<b>TS:</b> " + f"{datetime.datetime.now():%H:%M:%S}HKT"
                     ]
     signals_stmt = EL.join(signals_list)
     message_nil_tmpl = "%s: NO MACDSTOC Alert at %s"
     message = ""    
     
+    signals_log = signals[['open','high','low','close','ema25','divergence','emaSmooth','macd','k_slow','d_slow','sk_slow','sd_slow','macdstoc_xup_positions','macdstoc_xdown_positions']].tail(20).to_string()
+      
     if (lxup):
-        message = (message_tmpl % (title, "Up", lts))
+        message = (message_tmpl % (title, "Up", lts, "GMT"))
         filepath = frameplot.plot_macdstoc_signals(historic_df, signals, title, True)
         filename = filepath.split("/")[-1]
+        logname = write_signals_log(signals_log).split("/")[-1]
         message = message + " (<a href='http://www.eggyolk.tech/gwtpt/%s' target='_blank'>Chart</a>)" % filename 
-        message = message + DEL + signals_stmt
+        message = message + DEL + signals_stmt + EL
+        message = message + " (<a href='http://www.eggyolk.tech/gwtpt/%s' target='_blank'>Log</a>)" % logname
     elif (lxdown):
-        message = (message_tmpl % (title, "Down", lts))
+        message = (message_tmpl % (title, "Down", lts, "GMT"))
         filepath = frameplot.plot_macdstoc_signals(historic_df, signals, title, True)
         filename = filepath.split("/")[-1]
+        logname = write_signals_log(signals_log).split("/")[-1]
         message = message + " (<a href='http://www.eggyolk.tech/gwtpt/%s' target='_blank'>Chart</a>)" % filename
         message = message + DEL + signals_stmt
+        message = message + " (<a href='http://www.eggyolk.tech/gwtpt/%s' target='_blank'>Log</a>)" % logname
     else:
         print(message_nil_tmpl % (title, lts))
         
     if (message):
-        bot_sender.broadcast(message, False)
+        bot_sender.broadcast(message, testMode)
     
     #print(signals.info())
     #print(signals.to_string())
     #print(signals.tail())
-    print(signals[['sk_slow','sd_slow', 'macdstoc_xup_positions', 'macdstoc_xdown_positions']].tail(20).to_string())
-    #print(signals.tail().to_string())
+    #print(signals[['sk_slow','sd_slow', 'macdstoc_xup_positions', 'macdstoc_xdown_positions']].tail(20).to_string())
+    print(signals_log)
 
 def main():
     
