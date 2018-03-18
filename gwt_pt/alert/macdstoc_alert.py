@@ -163,7 +163,7 @@ def get_alert(title, historic_data):
                     , "<b>emaSmooth:</b> " + lemas
                     , "<b>STOC:</b> " + lskslow + "/" + lsdslow
                     , "<b>MSTOC:</b> " + lkslow + "/" + ldslow
-                    , "<b>TS:</b> " + f"{datetime.datetime.now():%H:%M:%S}HKT"
+                    , "<b>TS:</b> " + datetime.datetime.now().strftime("%H:%M:%S") + "HKT"
                     ]
     signals_stmt = EL.join(signals_list)
     message_nil_tmpl = "%s: NO MACDSTOC Alert at %s"
@@ -222,6 +222,8 @@ def main():
     #CURRENCY_PAIR = ["EUR/USD"]
     METAL_PAIR = ["XAGUSD", "XAUUSD"]
     HKFE_PAIR = ["HSI"]
+    
+    errorMessage = ""
 
     for cur in CURRENCY_PAIR:
     
@@ -233,6 +235,10 @@ def main():
         print("Checking on " + title + " ......")
 
         hist_data = ibkr.get_fx_data(symbol, currency, duration, period)
+
+        if (not hist_data):
+            bot_sender.broadcast("ERROR: No Data returns for %s" % cur, testMode)
+
         get_alert(title, hist_data)
         print("Sleeping for " + str(SLEEP_PERIOD) + " seconds...")
         time.sleep(SLEEP_PERIOD)
