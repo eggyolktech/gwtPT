@@ -63,6 +63,7 @@ class ema_xover_strategy(strategy):
         signals['low'] = self.bars['low']
         signals['close'] = self.bars['close']
         signals["ema25"] = EMA(signals, 'close', 25)
+        signals['nopen'] = signals['open'].shift(-1) # get next bar open for trade action
 
         # MACD
         macd = MACD(self.bars['close'])
@@ -125,6 +126,8 @@ class ema_xover_portfolio(portfolio):
     def backtest_portfolio(self):
         pf = pd.DataFrame(index=self.bars.index)
         pf['close'] = self.bars['close']
+        pf['open'] = self.bars['open']
+        pf['nopen'] = self.signals['nopen']
         pf['pos'] = self.positions
         pf['holdings'] = self.positions.mul(self.bars['close'], axis='index')
         pf['cash'] = self.initial_capital - pf['holdings'].cumsum()
@@ -149,7 +152,26 @@ def run_strat(symbol, historic_data):
     
     ema_portfolio = ema_xover_portfolio(symbol, bars, signals, initial_capital=100000.0)
     pf = ema_portfolio.backtest_portfolio()
+    
+    #print(pf)
+    recon = (pf[(pf.pos == 10) | (pf.pos == -10)])[['close', 'nopen', 'pos']]
+    recon['l'] = recon['nopen'].diff() - 30
+    recon.loc[recon['pos'] == 10, 'l'] = None
+    recon['lpos'] = (recon['l'] * 10)
+    recon.loc[recon['lpos'] != 0, 'lpos_comm'] = recon['lpos'] - 34 
+    ltotal = recon['lpos_comm'].sum()
   
+    recon['s'] = recon['nopen'].diff() + 30
+    recon.loc[recon['pos'] == -10, 's'] = None
+    recon['spos'] = (recon['s'] * -10)
+    recon.loc[recon['spos'] != 0, 'spos_comm'] = recon['spos'] - 34 
+    stotal = recon['spos_comm'].sum()
+  
+    print(recon.to_string())
+    print("Total P&L (Long): $%f" % ltotal)
+    print("Total P&L (Short): $%f" % stotal)
+  
+    
     ## Plot the strategy charting
     title = "EMA Xover Strategy Backtest for %s" % symbol
     #print(signals[['sk_slow','sd_slow', 'macdstoc_xup_positions', 'macdstoc_xdown_positions']].tail(20).to_string())
@@ -157,26 +179,91 @@ def run_strat(symbol, historic_data):
 
     btplot.plot_with_portfolio(bars, signals, pf, title, True)
 
-def main():
+def gen_alert(symbol="MHI"):     
     
-    passage = "Generation of Macdstoc Strats............."
-    print(passage)
+    duration = "1 M"        
+    period = "1 hour"
+    current_mth = datetime.datetime.today().strftime('%Y%m')
+    #current_mth = "201802"
+    title = symbol + "@" + period + " (Contract: " + current_mth + ")"
+    print("Checking on " + title + " ......")
 
-    HKFE_PAIR = ["HSI"]
-        
-    # Futures Pair
-    for cur in HKFE_PAIR:
+    historic_data = ibkr.get_hkfe_data(current_mth, symbol, duration, period)
+    
+    # Data pre-processing
+    bars = pd.DataFrame(historic_data, columns=['datetime', 'open', 'high', 'low', 'close', 'volume'])
+    bars.set_index('datetime', inplace=True)
+    bars.index = pd.to_datetime(bars.index)
+    
+    ema_strats = ema_xover_strategy(symbol, bars, 25)
+    signals = ema_strats.generate_signals()
+    
+    latest_signal = signals.iloc[-2:].head(1)
+    lts = latest_signal.index[0]
+    lrec = latest_signal.iloc[0]
+    lxup = int(lrec['xup_pos'])
+    lxdown = int(lrec['xdown_pos'])
+    lopen = "%.0f" % lrec['open']
+    lhigh = "%.0f" % lrec['high']
+    llow = "%.0f" % lrec['low']
+    lclose = "%.0f" % lrec['close']
+    lmacd = "%.2f" % lrec['macd']
+    lemas = "%.2f" % lrec['emaSmooth']
+    lskslow = "%.2f" % lrec['k_slow']
+    lsdslow = "%.2f" % lrec['d_slow']
+    lema25 = "%.2f" % lrec['ema25']
 
-        symbol = cur
+    print(signals[['open', 'close', 'nopen', 'ema25', 'xup_pos', 'xdown_pos']].to_string())
+    print(latest_signal[['open', 'close', 'nopen', 'ema25', 'xup_pos', 'xdown_pos']].to_string())
+    
+    message_tmpl = "<b>" + u'\U0001F514' + " %s: \nMA Strategy X%s%s</b>\n<i>at %s%s</i>"
+    message_nil_tmpl = "%s: NO MA Strategy Alert at %s"
+    signals_list = ["<b>OPEN:</b> " + lopen
+                    , "<b>HIGH:</b> " + lhigh
+                    , "<b>LOW:</b> " + llow
+                    , "<b>CLOSE:</b> " + lclose
+                    , "<b>MA Signal:</b> " + lema25
+                    #, "<b>MACD:</b> " + lmacd
+                    #, "<b>emaSmooth:</b> " + lemas
+                    #, "<b>STOC:</b> " + lskslow + "/" + lsdslow
+                    , "<b>TS:</b> " + datetime.datetime.now().strftime("%H:%M:%S") + "HKT"
+                    ]
+    signals_stmt = EL.join(signals_list)
+    message = ""    
+    
+    if (lxup):
+        message = (message_tmpl % (title, "Up", u'\U0001F332', lts, "HKT"))
+        message = message + DEL + signals_stmt + EL
+    elif (lxdown):
+        message = (message_tmpl % (title, "Down", u'\U0001F53B', lts, "HKT"))
+        message = message + DEL + signals_stmt + EL
+    else:
+        print(message_nil_tmpl % (title, lts))        
+       
+    if (message):
+        print(message)
+        bot_sender.broadcast_list(message, "telegram-pt")
+    
+def main(args):
+    
+    start_time = time.time()
+
+    if (len(args) > 1 and args[1] == "gen_alert"):
+        gen_alert("MHI")
+    else:
+        symbol = "MHI"
         #duration = "3 Y"
-        duration = "6 M"        
+        duration = "2 M"        
         period = "1 hour"
         current_mth = datetime.datetime.today().strftime('%Y%m')
-        title = symbol + "@" + period
+        #current_mth = "201802"
+        title = symbol + "@" + period + " (" + current_mth + ")"
         print("Checking on " + title + " ......")
 
         hist_data = ibkr.get_hkfe_data(current_mth, symbol, duration, period)
         run_strat(title, hist_data)
+    
+    print("Time elapsed: " + "%.3f" % (time.time() - start_time) + "s")    
 
 if __name__ == "__main__":
-    main() 
+    main(sys.argv) 

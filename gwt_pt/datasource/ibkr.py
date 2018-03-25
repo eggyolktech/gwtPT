@@ -207,7 +207,7 @@ class TestClient(EClient):
         return resolved_ibcontract
 
 
-    def get_IB_historical_data(self, ibcontract, durationStr="1 Y", barSizeSetting="4 hours",
+    def get_IB_historical_data(self, ibcontract, durationStr="1 Y", barSizeSetting="4 hours", priceType = "MIDPOINT",
                                tickerid=DEFAULT_HISTORIC_DATA_ID):
 
         """
@@ -226,7 +226,7 @@ class TestClient(EClient):
             datetime.datetime.today().strftime("%Y%m%d %H:%M:%S %Z"),  # endDateTime,
             durationStr,  # durationStr,
             barSizeSetting,  # barSizeSetting,
-            "MIDPOINT",
+            priceType,
             #"TRADES",  # whatToShow,
             1,  # useRTH,
             1,  # formatDate
@@ -272,9 +272,9 @@ def get_metal_data(symbol="XAUUSD", duration = "20 D", period = "30 mins", is_si
     #ip = "127.0.0.1"
     
     if (is_simulated):
-        app = TestApp(ip, 4002, 1)
+        app = TestApp(ip, 4002, 3)
     else:
-        app = TestApp(ip, 4001, 1)
+        app = TestApp(ip, 4001, 3)
         
     ibcontract = IBcontract()
     #ibcontract.lastTradeDateOrContractMonth="201803"
@@ -305,9 +305,9 @@ def get_hkfe_data(contractMonth, symbol="MHI", duration = "20 D", period = "30 m
     #ip = "127.0.0.1"
     
     if (is_simulated):
-        app = TestApp(ip, 4002, 1)
+        app = TestApp(ip, 4002, 2)
     else:
-        app = TestApp(ip, 4001, 1)
+        app = TestApp(ip, 4001, 2)
         
     ibcontract = IBcontract()
     #YYYYMM
@@ -318,12 +318,12 @@ def get_hkfe_data(contractMonth, symbol="MHI", duration = "20 D", period = "30 m
  
     resolved_ibcontract = app.resolve_ib_contract(ibcontract)
 
-    historic_data = app.get_IB_historical_data(resolved_ibcontract, duration, period)
+    historic_data = app.get_IB_historical_data(resolved_ibcontract, duration, period, "TRADES")
     #print(historic_data)
     
-    #out_tup = resample.filter_data(historic_data, period)
-    #historic_data = out_tup
-    
+    out_tup = resample.filter_data("HKFE", historic_data, period)
+    historic_data = out_tup
+    #print(historic_data)
     try:
         app.disconnect()
     except:
@@ -358,7 +358,7 @@ def get_fx_data(symbol, currency, duration = "2 M", period = "4 hours", is_simul
     historic_data = app.get_IB_historical_data(resolved_ibcontract, duration, period)
     #print(historic_data)
     
-    out_tup = resample.filter_data(historic_data, period)
+    out_tup = resample.filter_data("FX", historic_data, period)
     historic_data = out_tup
     
     try:
@@ -370,11 +370,11 @@ def get_fx_data(symbol, currency, duration = "2 M", period = "4 hours", is_simul
 
 def main():
     
-    print(get_fx_data("EUR", "USD"))
+    #print(get_fx_data("EUR", "USD"))
     
     current_mth = datetime.datetime.today().strftime('%Y%m')
     
-    #print(get_hkfe_data(current_mth, "HSI"))
+    print(get_hkfe_data(current_mth, period = "1 hour", symbol = "HSI"))
 
     #print(get_metal_data("XAGUSD"))
     
