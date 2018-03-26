@@ -20,11 +20,11 @@ if (os.name == 'nt'):
 else:
     logfile = '/app/gwtPT/gwt_pt/log/macdstoc_alert_%s.log' % datetime.datetime.today().strftime('%m%d-%H%M%S')
     testMode = False
+    sys.stderr.write = lambda s: logger.error(s)
+    sys.stdout.write = lambda s: logger.info(s)
 
 logging.basicConfig(filename=logfile, level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 logger = logging.getLogger()
-sys.stderr.write = lambda s: logger.error(s)
-sys.stdout.write = lambda s: logger.info(s)
 
 EL = "\n"
 DEL = "\n\n"
@@ -43,6 +43,24 @@ MACDSTOC_THRESHOLD = 1.0
 MONITOR_PERIOD = 20
 SLEEP_PERIOD = 8
 
+CURRENCY_PAIR = ["EUR/USD", 
+                "GBP/USD", 
+                "USD/JPY", 
+                "EUR/JPY", 
+                "GBP/JPY", 
+                #"EUR/GBP", 
+                "USD/CAD", 
+                "AUD/USD", 
+                "NZD/USD", 
+                #"USD/CHF", 
+                #"AUD/NZD", 
+                #"USD/NOK", 
+                #"USD/SEK", 
+                "USD/SGD"]
+
+#CURRENCY_PAIR = ["EUR/USD"]
+METAL_PAIR = ["XAGUSD", "XAUUSD"]
+HKFE_PAIR = ["HSI"]
 
 def write_signals_log(signals_str):
 
@@ -57,16 +75,7 @@ def write_signals_log(signals_str):
         
     return logpath
 
-
-def get_alert(title, historic_data): 
-    
-    # Set float format
-    #pd.options.display.float_format = "{:.9f}".format
-    
-    # Data pre-processing
-    historic_df = pd.DataFrame(historic_data, columns=['datetime', 'open', 'high', 'low', 'close', 'volume'])
-    historic_df.set_index('datetime', inplace=True)
-    historic_df.index = pd.to_datetime(historic_df.index)
+def gen_signal(historic_df):
 
     signals = pd.DataFrame(index=historic_df.index)
     signals['open'] = historic_df['open']    
@@ -138,6 +147,25 @@ def get_alert(title, historic_data):
     signals['macdstoc_xdown_positions'] = signals['signal_macdstoc_xdown'].diff()
     signals.loc[signals.macdstoc_xdown_positions == -1.0, 'macdstoc_xdown_positions'] = 0.0
     
+    return signals
+ 
+def format_hist_df(historic_data):
+
+    # Set float format
+    #pd.options.display.float_format = "{:.9f}".format
+    
+    # Data pre-processing
+    historic_df = pd.DataFrame(historic_data, columns=['datetime', 'open', 'high', 'low', 'close', 'volume'])
+    historic_df.set_index('datetime', inplace=True)
+    historic_df.index = pd.to_datetime(historic_df.index)
+    
+    return historic_df
+ 
+def get_alert(title, historic_data): 
+    
+    historic_df = format_hist_df(historic_data)
+    signals = gen_signal(historic_df)
+    
     latest_signal = signals.tail(1)
     lts = latest_signal.index[0]
     lxup = int(latest_signal.iloc[0]['macdstoc_xup_positions'])
@@ -199,38 +227,86 @@ def get_alert(title, historic_data):
     #print(signals[['sk_slow','sd_slow', 'macdstoc_xup_positions', 'macdstoc_xdown_positions']].tail(20).to_string())
     print(signals_log)
 
-def main():
+def update_latest_pos(cur, signals):
+
+    lsig = signals.loc[(signals['macdstoc_xup_positions'] == 1.0) | (signals['macdstoc_xdown_positions'] == 1.0)].tail(1)
+    lrec = lsig.iloc[0]
+    if (lrec['macdstoc_xup_positions']):
+        print("%s XUP" % cur)
+    else:
+        print("%s XDOWN" % cur)
     
-    passage = "Generation of Macdstoc Alert............."
+def alert_daily():    
+    
+    passage = "Generation of Macdstoc Hourly Alert............."
     print(passage)
     
-    CURRENCY_PAIR = ["EUR/USD", 
-                    "GBP/USD", 
-                    "USD/JPY", 
-                    "EUR/JPY", 
-                    "GBP/JPY", 
-                    #"EUR/GBP", 
-                    "USD/CAD", 
-                    "AUD/USD", 
-                    "NZD/USD", 
-                    #"USD/CHF", 
-                    #"AUD/NZD", 
-                    #"USD/NOK", 
-                    #"USD/SEK", 
-                    "USD/SGD"]
-    
-    #CURRENCY_PAIR = ["EUR/USD"]
-    METAL_PAIR = ["XAGUSD", "XAUUSD"]
-    HKFE_PAIR = ["HSI"]
-    
     errorMessage = ""
+    duration = "3 M"
+    period = "1 day"
 
     for cur in CURRENCY_PAIR:
     
         symbol = cur.split("/")[0]
         currency = cur.split("/")[1]
-        duration = "16 D"
-        period = "1 hour"
+        title = symbol + "/" + currency + "@" + period
+        print("Checking on " + title + " ......")
+
+        hist_data = ibkr.get_fx_data(symbol, currency, duration, period)
+        
+        historic_df = format_hist_df(hist_data)
+        signals = gen_signal(historic_df)
+        update_latest_pos(cur, signals)
+        
+        print("Sleeping for " + str(SLEEP_PERIOD) + " seconds...")
+        time.sleep(SLEEP_PERIOD)
+        
+    # Metal Pair
+    for cur in METAL_PAIR:
+
+        symbol = cur
+        title = symbol + "@" + period
+        print("Checking on " + title + " ......")
+
+        hist_data = ibkr.get_metal_data(symbol, duration, period)
+        
+        historic_df = format_hist_df(hist_data)
+        signals = gen_signal(historic_df)
+        update_latest_pos(cur, signals)
+        
+        print("Sleeping for " + str(SLEEP_PERIOD) + " seconds...")
+        time.sleep(SLEEP_PERIOD)
+        
+    # Futures Pair
+    for cur in HKFE_PAIR:
+
+        symbol = cur
+        current_mth = datetime.datetime.today().strftime('%Y%m')
+        title = symbol + "@" + period
+        print("Checking on " + title + " ......")
+
+        hist_data = ibkr.get_hkfe_data(current_mth, symbol, duration, period)
+ 
+        historic_df = format_hist_df(hist_data)
+        signals = gen_signal(historic_df)
+        update_latest_pos(cur, signals)
+
+        print("Sleeping for " + str(SLEEP_PERIOD) + " seconds...")
+        time.sleep(SLEEP_PERIOD)
+    
+def alert_hourly():
+
+    passage = "Generation of Macdstoc Hourly Alert............."
+    print(passage)
+    
+    errorMessage = ""
+    duration = "16 D"
+    period = "1 hour"
+    
+    for cur in CURRENCY_PAIR:
+    
+        symbol = cur.split("/")[0]
+        currency = cur.split("/")[1]
         title = symbol + "/" + currency + "@" + period
         print("Checking on " + title + " ......")
 
@@ -247,8 +323,6 @@ def main():
     for cur in METAL_PAIR:
 
         symbol = cur
-        duration = "16 D"
-        period = "1 hour"
         title = symbol + "@" + period
         print("Checking on " + title + " ......")
 
@@ -261,8 +335,6 @@ def main():
     for cur in HKFE_PAIR:
 
         symbol = cur
-        duration = "16 D"
-        period = "1 hour"
         current_mth = datetime.datetime.today().strftime('%Y%m')
         title = symbol + "@" + period
         print("Checking on " + title + " ......")
@@ -272,5 +344,16 @@ def main():
         print("Sleeping for " + str(SLEEP_PERIOD) + " seconds...")
         time.sleep(SLEEP_PERIOD)
 
+def main(args):
+    
+    start_time = time.time()
+
+    if (len(args) > 1 and args[1] == "alert_daily"):
+        alert_daily()        
+    else:
+        alert_hourly()
+    
+    print("Time elapsed: " + "%.3f" % (time.time() - start_time) + "s")    
+
 if __name__ == "__main__":
-    main() 
+    main(sys.argv) 

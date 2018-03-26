@@ -23,7 +23,7 @@ def filter_data(type, ib_tuples, period):
 
     filter = filterDict = None
     if type == "FX":
-        filterDictfilterDict = FILTER_DICT_FX
+        filterDict = FILTER_DICT_FX
     elif type == "HKFE":
         filterDict = FILTER_DICT_HKFE
         
