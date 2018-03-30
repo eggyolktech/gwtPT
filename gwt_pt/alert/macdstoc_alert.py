@@ -9,6 +9,7 @@ from gwt_pt.common.indicator import SMA, EMA, RSI, FASTSTOC, SLOWSTOC, MACD
 from gwt_pt.datasource import ibkr 
 from gwt_pt.telegram import bot_sender
 from gwt_pt.charting import frameplot
+from gwt_pt.redis import redis_pool
 
 import time
 import datetime
@@ -20,8 +21,8 @@ if (os.name == 'nt'):
 else:
     logfile = '/app/gwtPT/gwt_pt/log/macdstoc_alert_%s.log' % datetime.datetime.today().strftime('%m%d-%H%M%S')
     testMode = False
-    sys.stderr.write = lambda s: logger.error(s)
-    sys.stdout.write = lambda s: logger.info(s)
+    #sys.stderr.write = lambda s: logger.error(s)
+    #sys.stdout.write = lambda s: logger.info(s)
 
 logging.basicConfig(filename=logfile, level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 logger = logging.getLogger()
@@ -161,7 +162,7 @@ def format_hist_df(historic_data):
     
     return historic_df
  
-def get_alert(title, historic_data): 
+def get_alert(cur, title, historic_data): 
     
     historic_df = format_hist_df(historic_data)
     signals = gen_signal(historic_df)
@@ -198,8 +199,15 @@ def get_alert(title, historic_data):
     message = ""    
     
     signals_log = signals[['open','high','low','close','ema25','divergence','emaSmooth','macd','k_slow','d_slow','sk_slow','sd_slow','macdstoc_xup_positions','macdstoc_xdown_positions']].tail(20).to_string()
-      
-    if (lxup):
+    #print(">>>>>>>>>>>>>>>>>> Get DS Key " + cur) 
+    ds = redis_pool.getV("DS:" + cur)
+    if (not ds):
+        ds = ""
+    else:
+        ds = ds.decode()
+    print(">>>>>>>>>>>>>>>>>> Daily Sig [" + cur + "]: " + str(lxup) + "/" + str(lxdown) + "/" + ds)
+  
+    if (lxup and ds == "XUP"):
         message = (message_tmpl % (title, "Up", lts, "GMT"))
         filepath = frameplot.plot_macdstoc_signals(historic_df, signals, title, True)
         filename = filepath.split("/")[-1]
@@ -207,7 +215,7 @@ def get_alert(title, historic_data):
         message = message + " (<a href='http://www.eggyolk.tech/gwtpt/%s' target='_blank'>Chart</a>)" % filename 
         message = message + DEL + signals_stmt + EL
         message = message + " (<a href='http://www.eggyolk.tech/gwtpt/%s' target='_blank'>Log</a>)" % logname
-    elif (lxdown):
+    elif (lxdown and ds == "XDOWN"):
         message = (message_tmpl % (title, "Down", lts, "GMT"))
         filepath = frameplot.plot_macdstoc_signals(historic_df, signals, title, True)
         filename = filepath.split("/")[-1]
@@ -225,7 +233,7 @@ def get_alert(title, historic_data):
     #print(signals.to_string())
     #print(signals.tail())
     #print(signals[['sk_slow','sd_slow', 'macdstoc_xup_positions', 'macdstoc_xdown_positions']].tail(20).to_string())
-    print(signals_log)
+    #print(signals_log)
 
 def update_latest_pos(cur, signals):
 
@@ -233,9 +241,11 @@ def update_latest_pos(cur, signals):
     lrec = lsig.iloc[0]
     if (lrec['macdstoc_xup_positions']):
         print("%s XUP" % cur)
+        redis_pool.setV("DS:" + cur, "XUP")
     else:
         print("%s XDOWN" % cur)
-    
+        redis_pool.setV("DS:" + cur, "XDOWN")
+
 def alert_daily():    
     
     passage = "Generation of Macdstoc Hourly Alert............."
@@ -315,7 +325,7 @@ def alert_hourly():
         if (not hist_data):
             bot_sender.broadcast("ERROR: No Data returns for %s" % cur, testMode)
 
-        get_alert(title, hist_data)
+        get_alert(cur, title, hist_data)
         print("Sleeping for " + str(SLEEP_PERIOD) + " seconds...")
         time.sleep(SLEEP_PERIOD)
         
@@ -327,7 +337,7 @@ def alert_hourly():
         print("Checking on " + title + " ......")
 
         hist_data = ibkr.get_metal_data(symbol, duration, period)
-        get_alert(title, hist_data)
+        get_alert(cur, title, hist_data)
         print("Sleeping for " + str(SLEEP_PERIOD) + " seconds...")
         time.sleep(SLEEP_PERIOD)
         
@@ -340,7 +350,7 @@ def alert_hourly():
         print("Checking on " + title + " ......")
 
         hist_data = ibkr.get_hkfe_data(current_mth, symbol, duration, period)
-        get_alert(title, hist_data)
+        get_alert(cur, title, hist_data)
         print("Sleeping for " + str(SLEEP_PERIOD) + " seconds...")
         time.sleep(SLEEP_PERIOD)
 

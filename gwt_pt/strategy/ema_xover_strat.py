@@ -41,6 +41,33 @@ EMA_WINDOW = 25
 MONITOR_PERIOD = 20
 SLEEP_PERIOD = 8
 
+LAST_TDAY_DICT = { 
+    'Jan-17': 26,
+    'Feb-17': 27,
+    'Mar-17': 30,
+    'Apr-17': 27,
+    'May-17': 29,
+    'Jun-17': 29,
+    'Jul-17': 28,
+    'Aug-17': 30,
+    'Sep-17': 28,
+    'Oct-17': 30,
+    'Nov-17': 29,
+    'Dec-17': 28,
+    'Jan-18': 30,
+    'Feb-18': 27,
+    'Mar-18': 28,
+    'Apr-18': 27,
+    'May-18': 30,
+    'Jun-18': 28,
+    'Jul-18': 30,
+    'Aug-18': 30,
+    'Sep-18': 27,
+    'Oct-18': 30,
+    'Nov-18': 29,
+    'Dec-18': 28
+}
+
 class ema_xover_strategy(strategy):
     """    
     Requires:
@@ -183,13 +210,17 @@ def gen_alert(symbol="MHI"):
     
     duration = "1 M"        
     period = "1 hour"
-    current_mth = datetime.datetime.today().strftime('%Y%m')
+    current_mth = get_contract_month()
     #current_mth = "201802"
     title = symbol + "@" + period + " (Contract: " + current_mth + ")"
     print("Checking on " + title + " ......")
 
     historic_data = ibkr.get_hkfe_data(current_mth, symbol, duration, period)
     
+    if (not historic_data):
+        print("Historic Data is empty!!!")
+        return
+
     # Data pre-processing
     bars = pd.DataFrame(historic_data, columns=['datetime', 'open', 'high', 'low', 'close', 'volume'])
     bars.set_index('datetime', inplace=True)
@@ -243,6 +274,25 @@ def gen_alert(symbol="MHI"):
     if (message):
         print(message)
         bot_sender.broadcast_list(message, "telegram-pt")
+
+def get_contract_month():
+
+    now = datetime.datetime.now()
+    later = now.replace(day=1).replace(month=now.month+1)
+    
+    cur_mth_str = now.strftime('%Y%m')
+    next_mth_str = later.strftime('%Y%m')
+
+    days = int(now.strftime('%d'))
+    cur_mth_key = now.strftime('%b-%y')
+    print("Days now %s, curMth %s, LastTDay %s" % (days, cur_mth_key, LAST_TDAY_DICT[cur_mth_key]))
+    
+    if (LAST_TDAY_DICT[cur_mth_key] and LAST_TDAY_DICT[cur_mth_key] <=  days):
+        print("Use " + next_mth_str)
+        return next_mth_str
+    else:
+        print("Use " + cur_mth_str)
+        return cur_mth_str
     
 def main(args):
     
@@ -253,14 +303,14 @@ def main(args):
     else:
         symbol = "MHI"
         #duration = "3 Y"
-        duration = "2 M"        
+        duration = "6 M"        
         period = "1 hour"
-        current_mth = datetime.datetime.today().strftime('%Y%m')
-        #current_mth = "201802"
-        title = symbol + "@" + period + " (" + current_mth + ")"
+        #contract_mth = get_contract_month()
+        contract_mth = datetime.datetime.now().strftime('%Y%m')
+        title = symbol + "@" + period + " (" + contract_mth + ")"
         print("Checking on " + title + " ......")
 
-        hist_data = ibkr.get_hkfe_data(current_mth, symbol, duration, period)
+        hist_data = ibkr.get_hkfe_data(contract_mth, symbol, duration, period)
         run_strat(title, hist_data)
     
     print("Time elapsed: " + "%.3f" % (time.time() - start_time) + "s")    
