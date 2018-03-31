@@ -18,9 +18,9 @@ import logging, sys
 LOGFILE_ENABLED = False
 
 if (os.name == 'nt'):
-    logfile = 'C:\\Users\\Hin\\eggyolktech\\gwtPT\\gwt_pt\\log\\macdstoc_strat.log'
+    logfile = 'C:\\Users\\Hin\\eggyolktech\\gwtPT\\gwt_pt\\log\\mkt_open_reversal_strat.log'
 else:
-    logfile = '/app/gwtPT/gwt_pt/log/macdstoc_strat_%s.log' % datetime.datetime.today().strftime('%m%d-%H%M%S')
+    logfile = '/app/gwtPT/gwt_pt/log/mkt_open_reversal_strat_%s.log' % datetime.datetime.today().strftime('%m%d-%H%M%S')
 
 logging.basicConfig(filename=logfile, level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 logger = logging.getLogger()
@@ -303,15 +303,16 @@ def main(args):
     else:
         symbol = "MHI"
         #duration = "3 Y"
-        duration = "6 M"        
-        period = "1 hour"
+        duration = "2 M"        
+        period = "5 mins"
         contract_mth = get_contract_month()
         #contract_mth = datetime.datetime.now().strftime('%Y%m')
         title = symbol + "@" + period + " (" + contract_mth + ")"
         print("Checking on " + title + " ......")
 
         hist_data = ibkr.get_hkfe_data(contract_mth, symbol, duration, period)
-        run_strat(title, hist_data)
+        print(hist_data)
+        #run_strat(title, hist_data)
     
     print("Time elapsed: " + "%.3f" % (time.time() - start_time) + "s")    
 
