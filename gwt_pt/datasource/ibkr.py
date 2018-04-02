@@ -370,11 +370,11 @@ def get_fx_data(symbol, currency, duration = "2 M", period = "4 hours", is_simul
 
 def main():
     
-    #print(get_fx_data("EUR", "USD"))
+    print(get_fx_data("EUR", "USD", duration = "1 M", period = "5 mins"))
     
-    current_mth = datetime.datetime.today().strftime('%Y%m')
+    #current_mth = datetime.datetime.today().strftime('%Y%m')
     
-    print(get_hkfe_data(current_mth, period = "1 hour", symbol = "HSI"))
+    #print(get_hkfe_data(current_mth, period = "1 hour", symbol = "HSI"))
 
     #print(get_metal_data("XAGUSD"))
     

@@ -41,6 +41,8 @@ EMA_WINDOW = 25
 MONITOR_PERIOD = 20
 SLEEP_PERIOD = 8
 
+GAP_THRESHOLD = 100
+
 LAST_TDAY_DICT = { 
     'Jan-17': 26,
     'Feb-17': 27,
@@ -68,7 +70,7 @@ LAST_TDAY_DICT = {
     'Dec-18': 28
 }
 
-class ema_xover_strategy(strategy):
+class mkt_open_reversal_strategy(strategy):
     """    
     Requires:
     symbol - A stock symbol on which to form a strategy on.
@@ -126,7 +128,7 @@ class ema_xover_strategy(strategy):
         
         return signals
 
-class ema_xover_portfolio(portfolio):
+class mkt_open_reversal_portfolio(portfolio):
     """Encapsulates the notion of a portfolio of positions based
     on a set of signals as provided by a Strategy.
 
@@ -174,11 +176,11 @@ def run_strat(symbol, historic_data):
     bars.set_index('datetime', inplace=True)
     bars.index = pd.to_datetime(bars.index)
     
-    ema_strats = ema_xover_strategy(symbol, bars, 25)
-    signals = ema_strats.generate_signals()
+    strats = mkt_open_reversal_strategy(symbol, bars, 25)
+    signals = strats.generate_signals()
     
-    ema_portfolio = ema_xover_portfolio(symbol, bars, signals, initial_capital=100000.0)
-    pf = ema_portfolio.backtest_portfolio()
+    portfolio = mkt_open_reversal_portfolio(symbol, bars, signals, initial_capital=100000.0)
+    pf = portfolio.backtest_portfolio()
     
     #print(pf)
     recon = (pf[(pf.pos == 10) | (pf.pos == -10)])[['close', 'nopen', 'pos']]
@@ -208,14 +210,14 @@ def run_strat(symbol, historic_data):
 
 def gen_alert(symbol="MHI"):     
     
-    duration = "1 M"        
-    period = "1 hour"
-    current_mth = get_contract_month()
-    #current_mth = "201802"
-    title = symbol + "@" + period + " (Contract: " + current_mth + ")"
+    duration = "2 M"        
+    period = "5 mins"
+    contract_mth = get_contract_month()
+    title = symbol + "@" + period + " (" + contract_mth + ")"
     print("Checking on " + title + " ......")
+    time.sleep(5)
 
-    historic_data = ibkr.get_hkfe_data(current_mth, symbol, duration, period)
+    historic_data = ibkr.get_hkfe_data(contract_mth, symbol, duration, period)
     
     if (not historic_data):
         print("Historic Data is empty!!!")
@@ -226,10 +228,66 @@ def gen_alert(symbol="MHI"):
     bars.set_index('datetime', inplace=True)
     bars.index = pd.to_datetime(bars.index)
     
-    ema_strats = ema_xover_strategy(symbol, bars, 25)
-    signals = ema_strats.generate_signals()
+    # get today time    
+    now = datetime.datetime.now()
+    mkt_open_str = now.strftime('%Y-%m-%d 09:20:00')
     
-    latest_signal = signals.iloc[-2:].head(1)
+    # test data
+    #mkt_open_str = '2018-03-29 09:20:00'
+    
+    # get mkt open bars
+    mkt_open_bars = (bars.loc[bars.index <= mkt_open_str]).tail(3)
+   
+    last_bar = mkt_open_bars.tail(1)
+    last_2nd_bar = mkt_open_bars.tail(2).head(1)
+    last_3rd_bar = mkt_open_bars.tail(3).head(1)
+    
+    print(last_bar)
+    print(last_2nd_bar)
+    print(last_3rd_bar)
+    
+    signal_gap = 0
+    signal_change = 0
+    signal_price = 0
+    
+    if (
+            last_bar.tail(1).index == mkt_open_str 
+            and "09:15" in str(last_2nd_bar.tail(1).index) 
+            and "16:25" in str(last_3rd_bar.tail(1).index)
+        ):
+        print("Processing Mkt Open bar %s ......" % mkt_open_str )
+        last_mkt_close = last_3rd_bar.iloc[0]['close']
+        today_mkt_open = last_2nd_bar.iloc[0]['open']
+        
+        print("Last Mkt Close %s, Today Mkt Open %s" % (last_mkt_close, today_mkt_open))
+        
+        signal_gap = today_mkt_open - last_mkt_close
+        
+        if abs(signal_gap) >= GAP_THRESHOLD:
+            print("Gap threshold limit satisfied [%s]" % signal_gap)
+        else:
+            print("Gap threshold limit NOT satisfied [%s]" % signal_gap)
+            return
+        
+        signal_change = last_2nd_bar.iloc[0]['close'] - last_2nd_bar.iloc[0]['open']
+        
+        if (signal_gap > 0 and signal_change < 0):
+            print("Upward Gap and Reversal (-ve) identified")
+            signal_price = last_2nd_bar.iloc[0]['low']
+        elif (signal_gap < 0 and signal_change > 0):
+            print("Downward Gap and Reversal (+ve) identified")
+            signal_price = last_2nd_bar.iloc[0]['high']
+        else:
+            print("NOT hitting any reversal scenario!")
+            return
+    else:
+        print("No Mkt Open bar is found, terminate!")
+        return
+    
+    #strats = mkt_open_reversal_strategy(symbol, bars, 25)
+    #signals = strats.generate_signals()
+    
+    '''latest_signal = signals.iloc[-2:].head(1)
     lts = latest_signal.index[0]
     lrec = latest_signal.iloc[0]
     lxup = int(lrec['xup_pos'])
@@ -269,11 +327,25 @@ def gen_alert(symbol="MHI"):
         message = (message_tmpl % (title, "Down", u'\U0001F53B', lts, "HKT"))
         message = message + DEL + signals_stmt + EL
     else:
-        print(message_nil_tmpl % (title, lts))        
-       
+        print(message_nil_tmpl % (title, lts))'''     
+    
+    message = ""
+    
+    if (signal_change != 0 and signal_price != 0):
+    
+        message = "Reversal Strategy Monitor \n@ %s" % mkt_open_str 
+        signals_list = ["<b>Gap:</b> " + str(signal_gap)
+                        , "<b>Mkt Open Change:</b> " + str(signal_change)
+                        , "<b>Reversal Price:</b> " + str(signal_price)
+                        , "<b>TS:</b> " + datetime.datetime.now().strftime("%H:%M:%S") + "HKT"
+                        ]
+        signals_stmt = EL.join(signals_list)
+        message = message + DEL + signals_stmt + EL
+        
     if (message):
         print(message)
-        bot_sender.broadcast_list(message, "telegram-pt")
+        bot_sender.broadcast_list(message, "telegram-chat-test")        
+        #bot_sender.broadcast_list(message, "telegram-pt")
 
 def get_contract_month():
 
