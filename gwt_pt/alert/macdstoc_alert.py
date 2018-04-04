@@ -239,12 +239,16 @@ def update_latest_pos(cur, signals):
 
     lsig = signals.loc[(signals['macdstoc_xup_positions'] == 1.0) | (signals['macdstoc_xdown_positions'] == 1.0)].tail(1)
     lrec = lsig.iloc[0]
+    message = ""
     if (lrec['macdstoc_xup_positions']):
-        print("%s XUP" % cur)
+        message = ("%s XUP" % cur)
         redis_pool.setV("DS:" + cur, "XUP")
     else:
-        print("%s XDOWN" % cur)
+        message = ("%s XDOWN" % cur)
         redis_pool.setV("DS:" + cur, "XDOWN")
+        
+    print(message)
+    return message
 
 def alert_daily():    
     
@@ -254,6 +258,8 @@ def alert_daily():
     errorMessage = ""
     duration = "3 M"
     period = "1 day"
+    
+    dsl = []
 
     for cur in CURRENCY_PAIR:
     
@@ -266,7 +272,7 @@ def alert_daily():
         
         historic_df = format_hist_df(hist_data)
         signals = gen_signal(historic_df)
-        update_latest_pos(cur, signals)
+        dsl.append(update_latest_pos(cur, signals))
         
         print("Sleeping for " + str(SLEEP_PERIOD) + " seconds...")
         time.sleep(SLEEP_PERIOD)
@@ -282,7 +288,7 @@ def alert_daily():
         
         historic_df = format_hist_df(hist_data)
         signals = gen_signal(historic_df)
-        update_latest_pos(cur, signals)
+        dsl.append(update_latest_pos(cur, signals))
         
         print("Sleeping for " + str(SLEEP_PERIOD) + " seconds...")
         time.sleep(SLEEP_PERIOD)
@@ -299,10 +305,17 @@ def alert_daily():
  
         historic_df = format_hist_df(hist_data)
         signals = gen_signal(historic_df)
-        update_latest_pos(cur, signals)
+        dsl.append(update_latest_pos(cur, signals))
 
         print("Sleeping for " + str(SLEEP_PERIOD) + " seconds...")
         time.sleep(SLEEP_PERIOD)
+        
+    message = "<b>Daily Macdstoc Signal</b>" + DEL
+    message = message + EL.join(dsl)
+    print(message)
+    
+    if (message):
+        bot_sender.broadcast(message, testMode)
     
 def alert_hourly():
 
