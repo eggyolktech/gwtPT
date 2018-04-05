@@ -404,18 +404,25 @@ ibcontract = IBcontract()
 #ibcontract.symbol="GE"
 #ibcontract.exchange="GLOBEX"
 
-ibcontract.symbol = "EUR"
-ibcontract.secType = "CASH"
-ibcontract.currency = "USD"
-ibcontract.exchange = "IDEALPRO"
+ibcontract.secType = "FUT"
+ibcontract.lastTradeDateOrContractMonth="201804"
+ibcontract.symbol = "MHI"
+ibcontract.exchange = "HKFE"
+
+#ibcontract.symbol = "EUR"
+#ibcontract.secType = "CASH"
+#ibcontract.currency = "USD"
+#ibcontract.exchange = "IDEALPRO"
 
 ## resolve the contract
 resolved_ibcontract = app.resolve_ib_contract(ibcontract)
 
 tickerid = app.start_getting_IB_market_data(resolved_ibcontract)
 
-time.sleep(30)
+print("sleeping for 10s...")
+time.sleep(10)
 
+print("What have we got so far?")
 ## What have we got so far?
 market_data1 = app.get_IB_market_data(tickerid)
 
@@ -424,8 +431,10 @@ print(market_data1[0])
 market_data1_as_df = market_data1.as_pdDataFrame()
 print(market_data1_as_df)
 
-time.sleep(30)
+print("sleeping for 30s...")
+time.sleep(10)
 
+print("stops the stream and returns all the data we've got so far..")
 ## stops the stream and returns all the data we've got so far
 market_data2 = app.stop_getting_IB_market_data(tickerid)
 

@@ -10,10 +10,12 @@ from gwt_pt.datasource import ibkr
 from gwt_pt.telegram import bot_sender
 from gwt_pt.charting import btplot
 from gwt_pt.strategy.strat_base import strategy, portfolio
+from gwt_pt.redis import redis_pool
 
 import time
 import datetime
 import logging, sys
+import json
 
 LOGFILE_ENABLED = False
 
@@ -233,7 +235,7 @@ def gen_alert(symbol="MHI"):
     mkt_open_str = now.strftime('%Y-%m-%d 09:20:00')
     
     # test data
-    #mkt_open_str = '2018-03-29 09:20:00'
+    mkt_open_str = '2018-03-29 09:20:00'
     
     # get mkt open bars
     mkt_open_bars = (bars.loc[bars.index <= mkt_open_str]).tail(3)
@@ -342,10 +344,27 @@ def gen_alert(symbol="MHI"):
         signals_stmt = EL.join(signals_list)
         message = message + DEL + signals_stmt + EL
         
+        signal_json = {}
+        signal_json['date'] = now.strftime('%Y-%m-%d')
+        if (signal_gap > 0):
+            signal_json['gap'] = 'UP'
+        else:
+            signal_json['gap'] = 'DOWN'
+        
+        signal_json['trigger'] = signal_price
+        json_data = json.dumps(signal_json)
+        print(json_data)
+        redis_pool.setV("MRS:" + symbol, json_data)
+        
+        #unpacked_json = json.loads(redis_pool.getV("MRS:" + symbol).decode('utf-8'))
+        #print(unpacked_json['date'])
+        #print(unpacked_json['gap'])
+        #print(unpacked_json['trigger'])
+        
     if (message):
         print(message)
         #bot_sender.broadcast_list(message, "telegram-chat-test")        
-        bot_sender.broadcast_list(message, "telegram-pt")
+        #bot_sender.broadcast_list(message, "telegram-pt")
 
 def get_contract_month():
 
