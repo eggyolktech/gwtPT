@@ -235,7 +235,7 @@ def gen_alert(symbol="MHI"):
     mkt_open_str = now.strftime('%Y-%m-%d 09:20:00')
     
     # test data
-    mkt_open_str = '2018-03-29 09:20:00'
+    #mkt_open_str = '2018-03-29 09:20:00'
     
     # get mkt open bars
     mkt_open_bars = (bars.loc[bars.index <= mkt_open_str]).tail(3)
@@ -364,7 +364,7 @@ def gen_alert(symbol="MHI"):
     if (message):
         print(message)
         #bot_sender.broadcast_list(message, "telegram-chat-test")        
-        #bot_sender.broadcast_list(message, "telegram-pt")
+        bot_sender.broadcast_list(message, "telegram-pt")
 
 def get_contract_month():
 
