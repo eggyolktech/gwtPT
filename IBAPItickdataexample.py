@@ -329,7 +329,7 @@ class TestClient(EClient):
         """
 
         self._market_data_q_dict[tickerid] = self.wrapper.init_market_data(tickerid)
-        self.reqMktData(tickerid, resolved_ibcontract, "", False, False, [])
+        self.reqMktData(tickerid, resolved_ibcontract, "", True, False, [])
 
         return tickerid
 
@@ -431,7 +431,7 @@ print(market_data1[0])
 market_data1_as_df = market_data1.as_pdDataFrame()
 print(market_data1_as_df)
 
-print("sleeping for 30s...")
+print("sleeping for 10s...")
 time.sleep(10)
 
 print("stops the stream and returns all the data we've got so far..")
