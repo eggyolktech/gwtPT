@@ -1,3 +1,5 @@
+#! /usr/bin/python
+
 # Gist example of IB wrapper ...
 #
 # Download API from http://interactivebrokers.github.io/#
