@@ -129,8 +129,8 @@ def trade_monitor_hkfe(json_args):
        
     if (message):
         print(message)
-        bot_sender.broadcast_list(message, "telegram-chat-test")   
-        #bot_sender.broadcast_list(message, "telegram-pt")
+        #bot_sender.broadcast_list(message, "telegram-chat-test")   
+        bot_sender.broadcast_list(message, "telegram-pt")
 
 def get_contract_month():
 
