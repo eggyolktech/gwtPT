@@ -60,10 +60,17 @@ LAST_TDAY_DICT = {
     'Dec-18': 28
 }
 
-def trade_monitor_hkfe(symbol="MHI"):     
+def trade_monitor_hkfe(json_args):     
+
+    symbol = json_args['symbol']
+    duration = json_args['duration']
+    period = json_args['period']
+    signal = json_args['signal']
+
+    signal_gap = signal['gap']
+    signal_date = signal['date']
+    signal_trigger = "%.0f" % signal['trigger']
     
-    duration = "3 D"        
-    period = "1 min"
     current_mth = get_contract_month()
     #current_mth = "201802"
     title = symbol + "@" + period + " (Contract: " + current_mth + ")"
@@ -80,55 +87,50 @@ def trade_monitor_hkfe(symbol="MHI"):
     bars.set_index('datetime', inplace=True)
     bars.index = pd.to_datetime(bars.index)
     
-    print(bars.to_string())
+    print(bars.tail())
     
-    message = ""    
-    
-    '''latest_signal = signals.iloc[-2:].head(1)
-    lts = latest_signal.index[0]
-    lrec = latest_signal.iloc[0]
-    lxup = int(lrec['xup_pos'])
-    lxdown = int(lrec['xdown_pos'])
+    latest_bar = bars.iloc[-2:].head(1)
+    lts = str(latest_bar.index[0])
+    ldt = str(latest_bar.index[0]).split()[0]
+    lrec = latest_bar.iloc[0]
     lopen = "%.0f" % lrec['open']
     lhigh = "%.0f" % lrec['high']
     llow = "%.0f" % lrec['low']
-    lclose = "%.0f" % lrec['close']
-    lmacd = "%.2f" % lrec['macd']
-    lemas = "%.2f" % lrec['emaSmooth']
-    lskslow = "%.2f" % lrec['k_slow']
-    lsdslow = "%.2f" % lrec['d_slow']
-    lema25 = "%.2f" % lrec['ema25']
-
-    print(signals[['open', 'close', 'nopen', 'ema25', 'xup_pos', 'xdown_pos']].to_string())
-    print(latest_signal[['open', 'close', 'nopen', 'ema25', 'xup_pos', 'xdown_pos']].to_string())
+    lclose = "%.0f" % lrec['close']    
     
-    message_tmpl = "<b>" + u'\U0001F514' + " %s: \nMA Strategy X%s%s</b>\n<i>at %s%s</i>"
-    message_nil_tmpl = "%s: NO MA Strategy Alert at %s"
-    signals_list = ["<b>OPEN:</b> " + lopen
-                    , "<b>HIGH:</b> " + lhigh
-                    , "<b>LOW:</b> " + llow
-                    , "<b>CLOSE:</b> " + lclose
-                    , "<b>MA Signal:</b> " + lema25
-                    #, "<b>MACD:</b> " + lmacd
-                    #, "<b>emaSmooth:</b> " + lemas
-                    #, "<b>STOC:</b> " + lskslow + "/" + lsdslow
-                    , "<b>TS:</b> " + datetime.datetime.now().strftime("%H:%M:%S") + "HKT"
-                    ]
-    signals_stmt = EL.join(signals_list)
-    message = ""    
+    print("\nSignal:[\n%s]" % signal)
+    print("\nLast Bar:[\n%s]" % latest_bar)
+    print("Last Bar Date: [%s]" % ldt)
     
-    if (lxup):
-        message = (message_tmpl % (title, "Up", u'\U0001F332', lts, "HKT"))
-        message = message + DEL + signals_stmt + EL
-    elif (lxdown):
-        message = (message_tmpl % (title, "Down", u'\U0001F53B', lts, "HKT"))
-        message = message + DEL + signals_stmt + EL
+    # Test case {'date': '2018-04-06', 'gap': 'UP', 'trigger': 30064.0}
+    
+    message = "" 
+    message_tmpl = "<b>" + u'\U0001F514' + " GAP %s Trade Trigger Hit : %s %s %s</b>\n<i>at %s</i>"
+    
+    if (ldt == signal_date):
+        print("Signal Date Check Passed [%s / %s]" % (ldt, signal_date))
+        if (signal_gap == "UP"):
+            if (lclose < signal_trigger):
+                print("GAP UP Trade Trigger Hit %s < %s" % (lclose, signal_trigger))
+                message = message_tmpl %(signal_gap, lclose, "&lt;", signal_trigger, lts)
+            else:
+                print("GAP UP Trade Trigger NOT Hit %s < %s" % (lclose, signal_trigger))
+        elif (signal_gap == "DOWN"):
+            if (lclose > signal_trigger):
+                print("GAP DOWN Trade Trigger Hit %s > %s" % (lclose, signal_trigger))
+                message = message_tmpl %(signal_gap, lclose, "&gt;",  signal_trigger, lts)
+            else:
+                print("GAP DOWN Trade Trigger NOT Hit %s < %s" % (lclose, signal_trigger))
+        else:
+            print("Signal Gap is invalid: [%s]" % signal_gap)  
     else:
-        print(message_nil_tmpl % (title, lts)) '''       
+        print("Signal Date Check Failed [%s / %s]" % (ldt, signal_date))
+    
        
     if (message):
         print(message)
-        bot_sender.broadcast_list(message, "telegram-pt")
+        bot_sender.broadcast_list(message, "telegram-chat-test")   
+        #bot_sender.broadcast_list(message, "telegram-pt")
 
 def get_contract_month():
 
@@ -148,12 +150,29 @@ def get_contract_month():
     else:
         print("Use " + cur_mth_str)
         return cur_mth_str
+        
+def strat_scheduler(function, json_args, cycle=10.0, iterations=10):
+
+    starttime=time.time()
     
+    print("Scheduler starts at %s" % time.ctime(int(starttime)))
+    runcount = 0
+    while (runcount < iterations):
+        print("Iteration %s runs at %s" % (runcount+1, time.ctime(int(time.time()))))
+        function( json_args )
+        time.sleep(cycle - ((time.time() - starttime) % cycle))
+        runcount = runcount + 1
+
+def testfun(json_args={}):
+
+    print("tick: " + str(json_args))
+      
 def main(args):
     
     start_time = time.time()
-
-    trade_monitor_hkfe()
+    
+    json_args = {"symbol": "MHI", "duration": "28800 S", "period": "1 min", "signal": {"date": "2018-04-06", "gap": "UP", "trigger": 30064.0}}
+    strat_scheduler(trade_monitor_hkfe, json_args, 60.0, 3)
     
     print("Time elapsed: " + "%.3f" % (time.time() - start_time) + "s")    
 

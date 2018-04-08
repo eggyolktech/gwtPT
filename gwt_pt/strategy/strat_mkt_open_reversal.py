@@ -11,6 +11,8 @@ from gwt_pt.telegram import bot_sender
 from gwt_pt.charting import btplot
 from gwt_pt.strategy.strat_base import strategy, portfolio
 from gwt_pt.redis import redis_pool
+from gwt_pt.execution import strat_trade_monitor
+
 
 import time
 import datetime
@@ -286,51 +288,6 @@ def gen_alert(symbol="MHI"):
         print("No Mkt Open bar is found, terminate!")
         return
     
-    #strats = mkt_open_reversal_strategy(symbol, bars, 25)
-    #signals = strats.generate_signals()
-    
-    '''latest_signal = signals.iloc[-2:].head(1)
-    lts = latest_signal.index[0]
-    lrec = latest_signal.iloc[0]
-    lxup = int(lrec['xup_pos'])
-    lxdown = int(lrec['xdown_pos'])
-    lopen = "%.0f" % lrec['open']
-    lhigh = "%.0f" % lrec['high']
-    llow = "%.0f" % lrec['low']
-    lclose = "%.0f" % lrec['close']
-    lmacd = "%.2f" % lrec['macd']
-    lemas = "%.2f" % lrec['emaSmooth']
-    lskslow = "%.2f" % lrec['k_slow']
-    lsdslow = "%.2f" % lrec['d_slow']
-    lema25 = "%.2f" % lrec['ema25']
-
-    print(signals[['open', 'close', 'nopen', 'ema25', 'xup_pos', 'xdown_pos']].to_string())
-    print(latest_signal[['open', 'close', 'nopen', 'ema25', 'xup_pos', 'xdown_pos']].to_string())
-    
-    message_tmpl = "<b>" + u'\U0001F514' + " %s: \nMA Strategy X%s%s</b>\n<i>at %s%s</i>"
-    message_nil_tmpl = "%s: NO MA Strategy Alert at %s"
-    signals_list = ["<b>OPEN:</b> " + lopen
-                    , "<b>HIGH:</b> " + lhigh
-                    , "<b>LOW:</b> " + llow
-                    , "<b>CLOSE:</b> " + lclose
-                    , "<b>MA Signal:</b> " + lema25
-                    #, "<b>MACD:</b> " + lmacd
-                    #, "<b>emaSmooth:</b> " + lemas
-                    #, "<b>STOC:</b> " + lskslow + "/" + lsdslow
-                    , "<b>TS:</b> " + datetime.datetime.now().strftime("%H:%M:%S") + "HKT"
-                    ]
-    signals_stmt = EL.join(signals_list)
-    message = ""    
-    
-    if (lxup):
-        message = (message_tmpl % (title, "Up", u'\U0001F332', lts, "HKT"))
-        message = message + DEL + signals_stmt + EL
-    elif (lxdown):
-        message = (message_tmpl % (title, "Down", u'\U0001F53B', lts, "HKT"))
-        message = message + DEL + signals_stmt + EL
-    else:
-        print(message_nil_tmpl % (title, lts))'''     
-    
     message = ""
     
     if (signal_change != 0 and signal_price != 0):
@@ -356,15 +313,22 @@ def gen_alert(symbol="MHI"):
         print(json_data)
         redis_pool.setV("MRS:" + symbol, json_data)
         
+        # send alert first
+        if (message):
+            print(message)
+            bot_sender.broadcast_list(message, "telegram-chat-test")        
+            #bot_sender.broadcast_list(message, "telegram-pt")
+
+        # add to trigger monitor
+        
+        json_args = {"symbol": "MHI", "duration": "28800 S", "period": "1 min", "signal": signal_json}
+        print("Json args: [%s]" % json_args)
+        strat_trade_monitor.strat_scheduler(strat_trade_monitor.trade_monitor_hkfe, json_args, 60.0, 20)
+        
         #unpacked_json = json.loads(redis_pool.getV("MRS:" + symbol).decode('utf-8'))
         #print(unpacked_json['date'])
         #print(unpacked_json['gap'])
-        #print(unpacked_json['trigger'])
-        
-    if (message):
-        print(message)
-        #bot_sender.broadcast_list(message, "telegram-chat-test")        
-        bot_sender.broadcast_list(message, "telegram-pt")
+        #print(unpacked_json['trigger'])        
 
 def get_contract_month():
 
