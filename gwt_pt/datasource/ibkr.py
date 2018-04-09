@@ -28,6 +28,8 @@ import datetime
 from gwt_pt.datasource import resample
 from gwt_pt.util import config_loader
 
+from enum import Enum
+
 DEFAULT_HISTORIC_DATA_ID=50
 DEFAULT_GET_CONTRACT_ID=43
 
@@ -35,6 +37,12 @@ DEFAULT_GET_CONTRACT_ID=43
 FINISHED = object()
 STARTED = object()
 TIME_OUT = object()
+
+class ClientID(Enum):
+    HIST_FX = 10001
+    HIST_HKFE = 10002
+    HIST_METAL = 10003
+    TICK_HKFE = 30002
 
 class finishableQueue(object):
 
@@ -272,9 +280,9 @@ def get_metal_data(symbol="XAUUSD", duration = "20 D", period = "30 mins", is_si
     #ip = "127.0.0.1"
     
     if (is_simulated):
-        app = TestApp(ip, 4002, 3)
+        app = TestApp(ip, 4002, ClientID.HIST_METAL.value)
     else:
-        app = TestApp(ip, 4001, 3)
+        app = TestApp(ip, 4001, ClientID.HIST_METAL.value)
         
     ibcontract = IBcontract()
     #ibcontract.lastTradeDateOrContractMonth="201803"
@@ -305,9 +313,9 @@ def get_hkfe_data(contractMonth, symbol="MHI", duration = "20 D", period = "30 m
     #ip = "127.0.0.1"
     
     if (is_simulated):
-        app = TestApp(ip, 4002, 2)
+        app = TestApp(ip, 4002, ClientID.HIST_HKFE.value)
     else:
-        app = TestApp(ip, 4001, 2)
+        app = TestApp(ip, 4001, ClientID.HIST_HKFE.value)
         
     ibcontract = IBcontract()
     #YYYYMM
@@ -339,9 +347,9 @@ def get_fx_data(symbol, currency, duration = "2 M", period = "4 hours", is_simul
     #ip = "127.0.0.1"
     
     if (is_simulated):
-        app = TestApp(ip, 4002, 1)
+        app = TestApp(ip, 4002, ClientID.HIST_FX.value)
     else:
-        app = TestApp(ip, 4001, 1)
+        app = TestApp(ip, 4001, ClientID.HIST_FX.value)
         
     ibcontract = IBcontract()
     #ibcontract.lastTradeDateOrContractMonth="201809"
