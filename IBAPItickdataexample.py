@@ -397,7 +397,7 @@ class TestApp(TestWrapper, TestClient):
 
 #if __name__ == '__main__':
 
-app = TestApp("13.250.58.82", 4001, 11)
+app = TestApp("13.250.58.82", 4001, 30001)
 
 ## lets get prices for this
 ibcontract = IBcontract()
