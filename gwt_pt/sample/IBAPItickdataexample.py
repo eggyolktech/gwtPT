@@ -31,6 +31,8 @@ import datetime
 import pandas as pd
 import numpy as np
 
+from gwt_pt.util import config_loader
+
 DEFAULT_MARKET_DATA_ID=50
 DEFAULT_GET_CONTRACT_ID=43
 
@@ -397,7 +399,11 @@ class TestApp(TestWrapper, TestClient):
 
 #if __name__ == '__main__':
 
-app = TestApp("13.250.58.82", 4001, 30001)
+config = config_loader.load()
+ip = config.get("ib-gateway","ip")
+#ip = "127.0.0.1"
+
+app = TestApp(ip, 4001, 39)
 
 ## lets get prices for this
 ibcontract = IBcontract()

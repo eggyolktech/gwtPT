@@ -25,11 +25,12 @@ from ibapi.contract import Contract as IBcontract
 from threading import Thread
 import queue
 import datetime
+from gwt_pt.util import config_loader
 
 import numpy as np
 import pandas as pd
 from pandas_datareader import data as web, wb
-from indicator import SMA, EMA, RSI, FASTSTOC, SLOWSTOC, MACD
+from gwt_pt.common.indicator import SMA, EMA, RSI, FASTSTOC, SLOWSTOC, MACD
 
 import matplotlib.pyplot as plt
 from matplotlib.dates import DateFormatter
@@ -287,7 +288,11 @@ class TestApp(TestWrapper, TestClient):
 
 #if __name__ == '__main__':
 
-app = TestApp("13.250.58.82", 4001, 1)
+config = config_loader.load()
+ip = config.get("ib-gateway","ip")
+#ip = "127.0.0.1"
+
+app = TestApp(ip, 4001, 29)
 
 ibcontract = IBcontract()
 #ibcontract.lastTradeDateOrContractMonth="201809"

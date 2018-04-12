@@ -26,6 +26,8 @@ from ibapi.contract import Contract as IBcontract
 from ibapi.order import Order
 from ibapi.execution import ExecutionFilter
 
+from gwt_pt.util import config_loader
+
 import time
 from threading import Thread
 import queue
@@ -826,7 +828,11 @@ class TestApp(TestWrapper, TestClient):
 
 if __name__ == '__main__':
 
-    app = TestApp("127.0.0.1", 4002, 2)
+    config = config_loader.load()
+    ip = config.get("ib-gateway","ip")
+    ip = "127.0.0.1"
+
+    app = TestApp(ip, 4002, 49)
 
     ## lets get prices for this
     ibcontract = IBcontract()

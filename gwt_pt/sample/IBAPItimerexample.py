@@ -20,7 +20,7 @@
 #
 # Now I'll try and replicate the time telling example
 
-
+from gwt_pt.util import config_loader
 from ibapi.wrapper import EWrapper
 from ibapi.client import EClient
 from threading import Thread
@@ -130,8 +130,11 @@ if __name__ == '__main__':
     ##
     ## Check that the port is the same as on the Gateway
     ## ipaddress is 127.0.0.1 if one same machine, clientid is arbitrary
-
-    app = TestApp("127.0.0.1", 4002, 10)
+   
+    config = config_loader.load()
+    ip = config.get("ib-gateway","ip")   
+    
+    app = TestApp(ip, 4001, 19)
 
     current_time = app.speaking_clock()
 

@@ -316,8 +316,8 @@ def gen_alert(symbol="MHI"):
         # send alert first
         if (message):
             print(message)
-            bot_sender.broadcast_list(message, "telegram-chat-test")        
-            #bot_sender.broadcast_list(message, "telegram-pt")
+            #bot_sender.broadcast_list(message, "telegram-chat-test")        
+            bot_sender.broadcast_list(message, "telegram-pt")
 
         # add to trigger monitor
         

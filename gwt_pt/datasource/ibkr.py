@@ -275,7 +275,6 @@ class TestApp(TestWrapper, TestClient):
 def get_metal_data(symbol="XAUUSD", duration = "20 D", period = "30 mins", is_simulated=False):    
 
     config = config_loader.load()
-
     ip = config.get("ib-gateway","ip")
     #ip = "127.0.0.1"
     
