@@ -239,14 +239,17 @@ def update_latest_pos(cur, signals):
 
     lsig = signals.loc[(signals['macdstoc_xup_positions'] == 1.0) | (signals['macdstoc_xdown_positions'] == 1.0)].tail(1)
     lrec = lsig.iloc[0]
+    #print(lrec)
+    ltime = lsig.index[0]
+    ltime = str(ltime).split()[0]
     message = ""
     if (lrec['macdstoc_xup_positions']):
-        message = ("%s XUP" % cur)
+        message = ("%s XUP since %s" % (cur, ltime))
         redis_pool.setV("DS:" + cur, "XUP")
     else:
-        message = ("%s XDOWN" % cur)
+        message = ("%s XDOWN since %s" % (cur, ltime))
         redis_pool.setV("DS:" + cur, "XDOWN")
-        
+    
     print(message)
     return message
 
