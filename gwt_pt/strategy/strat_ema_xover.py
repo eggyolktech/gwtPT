@@ -258,6 +258,7 @@ def gen_alert(symbol="MHI"):
                     #, "<b>emaSmooth:</b> " + lemas
                     #, "<b>STOC:</b> " + lskslow + "/" + lsdslow
                     , "<b>TS:</b> " + datetime.datetime.now().strftime("%H:%M:%S") + "HKT"
+                    , "<b>CH:</b> https://goo.gl/yAtFvH"
                     ]
     signals_stmt = EL.join(signals_list)
     message = ""    

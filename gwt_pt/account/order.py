@@ -1,25 +1,5 @@
 #! /usr/bin/python
 
-# Gist example of IB wrapper ...
-#
-# Download API from http://interactivebrokers.github.io/#
-#
-# Install python API code /IBJts/source/pythonclient $ python3 setup.py install
-#
-# Note: The test cases, and the documentation refer to a python package called IBApi,
-#    but the actual package is called ibapi. Go figure.
-#
-# Get the latest version of the gateway:
-# https://www.interactivebrokers.com/en/?f=%2Fen%2Fcontrol%2Fsystemstandalone-ibGateway.php%3Fos%3Dunix
-#    (for unix: windows and mac users please find your own version)
-#
-# Run the gateway
-#
-# user: edemo
-# pwd: demo123
-#
-# Now I'll try and replicate the historical data example
-
 from ibapi.wrapper import EWrapper
 from ibapi.client import EClient
 from ibapi.contract import Contract as IBcontract
@@ -27,13 +7,17 @@ from ibapi.order import Order
 from ibapi.execution import ExecutionFilter
 
 from gwt_pt.util import config_loader
+from gwt_pt.telegram import bot_sender
 
-import time
+import time, sys
 from threading import Thread
 import queue
 import datetime
 from copy import deepcopy
 from pprint import pprint
+
+EL = "\n"
+DEL = "\n\n"
 
 ## these are just arbitrary numbers in leiu of a policy on this sort of thing
 DEFAULT_MARKET_DATA_ID=50
@@ -237,7 +221,7 @@ class list_of_mergables(list):
         for stack_member in self:
             #print(type(stack_member))
             
-            if hasattr(stack_member, 'contract'):
+            '''if hasattr(stack_member, 'contract'):
                 #pprint(vars(stack_member))
                 contract = stack_member.contract
                 symbol = contract.symbol
@@ -248,7 +232,7 @@ class list_of_mergables(list):
             else:
                 ordstatus = stack_member.status
                 #pprint(vars(stack_member))
-                '''filled = ordstatus.filled
+                filled = ordstatus.filled
                 remaining = ordstatus.remaining
                 avgFillPrice = ordstatus.avgFillPrice
                 permId = ordstatus.permId
@@ -259,8 +243,6 @@ class list_of_mergables(list):
                 mktCapPrice = ordstatus.mktCapPrice 
                 status = ordstatus.status'''
 
-            
-            #print("@@@@@@@@@@@@@@@@")
             id = stack_member.id
 
             if id not in new_stack_dict.keys():
@@ -883,26 +865,17 @@ class TestApp(TestWrapper, TestClient):
 
         self.init_error()
 
+def send_open_orders(open_orders):
 
-if __name__ == '__main__':
-
-    config = config_loader.load()
-    ip = config.get("ib-gateway","ip")
-    port = 4001
+    message = ""
+    message_list = []
+    message_header = "<b>" + u'\U0001F514' + " Hourly Open Orders Updates</b>" + DEL
     
-    #ip = "127.0.0.1"
-    #port = 4002
-    
-    app = TestApp(ip, port, 59)
-   
-    print("Open orders (#################)")
-    open_orders = app.get_open_orders()
     keys = open_orders.keys()
     
     for k in keys:
     
-        orderInfo = open_orders[k]
-        
+        orderInfo = open_orders[k]        
         contract = orderInfo.contract
         symbol = contract.symbol
         secType = contract.secType
@@ -920,10 +893,40 @@ if __name__ == '__main__':
        
         ordstatus = orderInfo.status
         
-        #print("sym %s, secType %s, cur %s" % (symbol, secType, currency))
-        print("%s [%s %s %s@$%s %s %s]" % (symbol, type, action, quantity, price, tif, ordstatus))
+        msg = ("%s %s %s %s@$%s\n%s %s" % (symbol, type, action, quantity, price, tif, ordstatus))
+        message_list.append(msg)
     
-    '''#for order in open_orders:
+    if (message_list):
+        message_stmt = DEL.join(message_list)  
+        message = message_header + message_stmt 
+
+    if (message):
+        #print(message)
+        bot_sender.broadcast_list(message, "telegram-position")
+        
+        
+if __name__ == "__main__":
+    
+    args = sys.argv
+
+    config = config_loader.load()
+    ip = config.get("ib-gateway","ip")
+    port = 4001
+    
+    #ip = "127.0.0.1"
+    #port = 4002
+    
+    app = TestApp(ip, port, 59)
+
+    if (len(args) > 1):
+        if (args[1] == "get_open_orders"):
+   
+            print("Get Open orders.........")
+            open_orders = app.get_open_orders()
+            send_open_orders(open_orders)
+
+    
+    #for order in open_orders:
     #    print(pprint(vars(order)))
     
     ## lets get prices for this
@@ -941,7 +944,7 @@ if __name__ == '__main__':
     ## resolve the contract
     #resolved_ibcontract = app.resolve_ib_contract(ibcontract)
 
-    order1=Order()
+    '''order1=Order()
     order1.action="BUY"
     order1.orderType="MKT"
     order1.totalQuantity=10

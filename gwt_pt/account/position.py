@@ -497,7 +497,7 @@ def send_accounting_updates(accounting_updates):
         message = message_header + message_stmt 
 
     if (message):
-        print(message)
+        #print(message)
         bot_sender.broadcast_list(message, "telegram-position")
         
 if __name__ == "__main__":
