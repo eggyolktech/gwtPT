@@ -59,7 +59,7 @@ CURRENCY_PAIR = ["EUR/USD",
                 #"USD/SEK", 
                 "USD/SGD"]
 
-#CURRENCY_PAIR = ["EUR/USD"]
+CURRENCY_PAIR = ["EUR/USD"]
 METAL_PAIR = ["XAGUSD", "XAUUSD"]
 HKFE_PAIR = ["HSI"]
 
@@ -182,7 +182,21 @@ def get_alert(cur, title, historic_data):
     lemas = "%.5f" % latest_signal.iloc[0]['emaSmooth']
     lskslow = "%.2f" % latest_signal.iloc[0]['k_slow']
     lsdslow = "%.2f" % latest_signal.iloc[0]['d_slow']
-           
+    
+    # Special Case 
+    # XUP sk_slow >  sd_slow, if n-1 9x/100, n 100/100, also treat as XUP
+    # XDOWN sk_slow <  sd_slow, if n-1 x/0, n 0/0, also treat as XDOWN
+    latest_2nd_signal = signals.tail(2).head(1)
+    if (latest_2nd_signal.iloc[0]['sk_slow'] < 100 and latest_2nd_signal.iloc[0]['sd_slow'] == 100 and
+        latest_signal.iloc[0]['sk_slow'] == 100 and latest_signal.iloc[0]['sd_slow'] == 100):
+        print("#### SPECIAL CASE XUP......")
+        lxup = 1
+
+    if (latest_2nd_signal.iloc[0]['sk_slow'] > 0 and latest_2nd_signal.iloc[0]['sd_slow'] == 0 and
+        latest_signal.iloc[0]['sk_slow'] == 0 and latest_signal.iloc[0]['sd_slow'] == 0):
+        print("#### SPECIAL CASE XDOWN.....")
+        lxdown = 1
+    
     message_tmpl = "<b>" + u'\U0001F514' + "%s: \nMACDSTOC X%s</b>\n<i>at %s%s</i>"
     signals_list = ["<b>OPEN:</b> " + lopen
                     , "<b>HIGH:</b> " + lhigh
@@ -198,30 +212,33 @@ def get_alert(cur, title, historic_data):
     message_nil_tmpl = "%s: NO MACDSTOC Alert at %s"
     message = ""    
     
-    signals_log = signals[['open','high','low','close','ema25','divergence','emaSmooth','macd','k_slow','d_slow','sk_slow','sd_slow','macdstoc_xup_positions','macdstoc_xdown_positions']].tail(20).to_string()
+    #signals_log = signals[['open','high','low','close','ema25','divergence','emaSmooth','macd','k_slow','d_slow','sk_slow','sd_slow','macdstoc_xup_positions','macdstoc_xdown_positions']].tail(20).to_string()
+    signals_log = signals[['k_slow','d_slow','sk_slow','sd_slow','macdstoc_xup_positions','macdstoc_xdown_positions']].tail(20).to_string()
     #print(">>>>>>>>>>>>>>>>>> Get DS Key " + cur) 
     ds = redis_pool.getV("DS:" + cur)
     if (not ds):
         ds = ""
     else:
         ds = ds.decode()
+        
     print(">>>>>>>>>>>>>>>>>> Daily Sig [" + cur + "]: " + str(lxup) + "/" + str(lxdown) + "/" + ds)
-  
-    if (lxup and ds == "XUP"):
+    if (lxup and "XUP" in ds):
         message = (message_tmpl % (title, "Up", lts, "GMT"))
         filepath = frameplot.plot_macdstoc_signals(historic_df, signals, title, True)
         filename = filepath.split("/")[-1]
         logname = write_signals_log(signals_log).split("/")[-1]
         message = message + " (<a href='http://www.eggyolk.tech/gwtpt/%s' target='_blank'>Chart</a>)" % filename 
         message = message + DEL + signals_stmt + EL
+        message = message + ("<b>DAILY:</b> %s" % ds) + EL
         message = message + " (<a href='http://www.eggyolk.tech/gwtpt/%s' target='_blank'>Log</a>)" % logname
-    elif (lxdown and ds == "XDOWN"):
+    elif (lxdown and "XDOWN" in ds):
         message = (message_tmpl % (title, "Down", lts, "GMT"))
         filepath = frameplot.plot_macdstoc_signals(historic_df, signals, title, True)
         filename = filepath.split("/")[-1]
         logname = write_signals_log(signals_log).split("/")[-1]
         message = message + " (<a href='http://www.eggyolk.tech/gwtpt/%s' target='_blank'>Chart</a>)" % filename
-        message = message + DEL + signals_stmt
+        message = message + DEL + signals_stmt + EL
+        message = message + ("<b>DAILY:</b> %s" % ds) + EL
         message = message + " (<a href='http://www.eggyolk.tech/gwtpt/%s' target='_blank'>Log</a>)" % logname
     else:
         print(message_nil_tmpl % (title, lts))
@@ -233,7 +250,7 @@ def get_alert(cur, title, historic_data):
     #print(signals.to_string())
     #print(signals.tail())
     #print(signals[['sk_slow','sd_slow', 'macdstoc_xup_positions', 'macdstoc_xdown_positions']].tail(20).to_string())
-    #print(signals_log)
+    print(signals_log)
 
 def update_latest_pos(cur, signals):
 
@@ -245,10 +262,10 @@ def update_latest_pos(cur, signals):
     message = ""
     if (lrec['macdstoc_xup_positions']):
         message = ("%s XUP since %s" % (cur, ltime))
-        redis_pool.setV("DS:" + cur, "XUP")
+        redis_pool.setV("DS:" + cur, "XUP since %s" % ltime)
     else:
         message = ("%s XDOWN since %s" % (cur, ltime))
-        redis_pool.setV("DS:" + cur, "XDOWN")
+        redis_pool.setV("DS:" + cur, "XDOWN since %s" % ltime)
     
     print(message)
     return message
@@ -272,7 +289,7 @@ def alert_daily():
         print("Checking on " + title + " ......")
 
         hist_data = ibkr.get_fx_data(symbol, currency, duration, period)
-        
+ 
         historic_df = format_hist_df(hist_data)
         signals = gen_signal(historic_df)
         dsl.append(update_latest_pos(cur, signals))
@@ -318,7 +335,8 @@ def alert_daily():
     print(message)
     
     if (message):
-        bot_sender.broadcast(message, testMode)
+        print(message)
+        #bot_sender.broadcast(message, testMode)
     
 def alert_hourly():
 
@@ -335,11 +353,15 @@ def alert_hourly():
         currency = cur.split("/")[1]
         title = symbol + "/" + currency + "@" + period
         print("Checking on " + title + " ......")
-
+        
         hist_data = ibkr.get_fx_data(symbol, currency, duration, period)
 
         if (not hist_data):
+            hist_data = ibkr.get_fx_data(symbol, currency, duration, period)
+
+        if (not hist_data):
             bot_sender.broadcast("ERROR: No Data returns for %s" % cur, testMode)
+            return
 
         get_alert(cur, title, hist_data)
         print("Sleeping for " + str(SLEEP_PERIOD) + " seconds...")
