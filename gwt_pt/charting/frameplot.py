@@ -75,13 +75,13 @@ def plot_macdstoc_signals(historic_df, signals, title, isFile=False):
     #ax1.plot(df_stoc_xup_idx, signals.low[signals.stoc_xup_positions == 1.0], '^', markersize=7, color='m')
 
     # plot macdstoc xup / xdown
-    macdstoc_xup_idx = signals.ix[signals.macdstoc_xup_positions == 1.0].index
-    df_macdstoc_xup_idx = [signals.index.get_loc(idx) for idx in macdstoc_xup_idx]
-    ax1.plot(df_macdstoc_xup_idx, signals.low[signals.macdstoc_xup_positions == 1.0], '^', markersize=7, color='m')
+    xup_idx = signals.ix[signals.xup_positions == 1.0].index
+    df_xup_idx = [signals.index.get_loc(idx) for idx in xup_idx]
+    ax1.plot(df_xup_idx, signals.low[signals.xup_positions == 1.0], '^', markersize=7, color='m')
 
-    macdstoc_xdown_idx = signals.ix[signals.macdstoc_xdown_positions == 1.0].index
-    df_macdstoc_xdown_idx = [signals.index.get_loc(idx) for idx in macdstoc_xdown_idx]
-    ax1.plot(df_macdstoc_xdown_idx, signals.high[signals.macdstoc_xdown_positions == 1.0], 'v', markersize=7, color='r')
+    xdown_idx = signals.ix[signals.xdown_positions == 1.0].index
+    df_xdown_idx = [signals.index.get_loc(idx) for idx in xdown_idx]
+    ax1.plot(df_xdown_idx, signals.high[signals.xdown_positions == 1.0], 'v', markersize=7, color='r')
     
     ax1.xaxis.set_major_formatter(ticker.FuncFormatter(format_date))
 
@@ -133,8 +133,8 @@ def plot_macdstoc_signals(historic_df, signals, title, isFile=False):
     #ax4.fill_between(signals.index, 0, 5, facecolor='red', alpha=.2, interpolate=True)
     
     # plot macdstoc xup / xdown
-    ax4.plot(df_macdstoc_xup_idx, signals.sk_slow[signals.macdstoc_xup_positions == 1.0], '^', markersize=7, color='m')
-    ax4.plot(df_macdstoc_xdown_idx, signals.sk_slow[signals.macdstoc_xdown_positions == 1.0], 'v', markersize=7, color='r')    
+    ax4.plot(df_xup_idx, signals.sk_slow[signals.xup_positions == 1.0], '^', markersize=7, color='m')
+    ax4.plot(df_xdown_idx, signals.sk_slow[signals.xdown_positions == 1.0], 'v', markersize=7, color='r')    
     
     ax4.xaxis.set_major_formatter(ticker.FuncFormatter(format_date))
     ax4.axes.xaxis.set_visible(True)
@@ -191,8 +191,8 @@ def plot_test(historic_data, title, isFile=False):
     signals['signal_stoc_xdown'] = 0.0
     signals['signal_macd_xup'] = 0.0
     signals['signal_macd_xdown'] = 0.0
-    signals['signal_macdstoc_xup'] = 0.0
-    signals['signal_macdstoc_xdown'] = 0.0    
+    signals['signal_xup'] = 0.0
+    signals['signal_xdown'] = 0.0    
 
     ###############################################################################
     ## Create a 'signal' for Slow Stoc cross over <=25    
@@ -211,34 +211,34 @@ def plot_test(historic_data, title, isFile=False):
     ###############################################################################
     ## Create a 'signal' for Macdstoc cross up <=5
     if (len(signals) >= MACDSTOC_WINDOW):
-        signals['signal_macdstoc_xup'][MACDSTOC_WINDOW:] = np.where(
+        signals['signal_xup'][MACDSTOC_WINDOW:] = np.where(
             (signals['sk_slow'][MACDSTOC_WINDOW:] > signals['sd_slow'][MACDSTOC_WINDOW:])
             & (signals['sd_slow'][MACDSTOC_WINDOW:] <= MACDSTOC_LOWER_LIMIT)
             , 1.0, 0.0)
     else:
-        signals['signal_macdstoc_xup'] = 0.0
+        signals['signal_xup'] = 0.0
     
     ## Take the difference of the signals in order to generate actual trading orders
-    signals['macdstoc_xup_positions'] = signals['signal_macdstoc_xup'].diff()
-    signals.loc[signals.macdstoc_xup_positions == -1.0, 'macdstoc_xup_positions'] = 0.0
+    signals['xup_positions'] = signals['signal_xup'].diff()
+    signals.loc[signals.xup_positions == -1.0, 'xup_positions'] = 0.0
  
     ## Create a 'signal' for Macdstoc cross down >=95
     if (len(signals) >= MACDSTOC_WINDOW):
-        signals['signal_macdstoc_xdown'][MACDSTOC_WINDOW:] = np.where(
+        signals['signal_xdown'][MACDSTOC_WINDOW:] = np.where(
             (signals['sk_slow'][MACDSTOC_WINDOW:] < signals['sd_slow'][MACDSTOC_WINDOW:])
             & (signals['sd_slow'][MACDSTOC_WINDOW:] >= MACDSTOC_UPPER_LIMIT)
             , 1.0, 0.0)
     else:
-        signals['signal_macdstoc_xdown'] = 0.0
+        signals['signal_xdown'] = 0.0
     
     ## Take the difference of the signals in order to generate actual trading orders
-    signals['macdstoc_xdown_positions'] = signals['signal_macdstoc_xdown'].diff()
-    signals.loc[signals.macdstoc_xdown_positions == -1.0, 'macdstoc_xdown_positions'] = 0.0
+    signals['xdown_positions'] = signals['signal_xdown'].diff()
+    signals.loc[signals.xdown_positions == -1.0, 'xdown_positions'] = 0.0
  
     #print(signals.info())
     #print(signals.to_string())
     #print(signals.tail())
-    print(signals[['sk_slow','sd_slow', 'signal_macdstoc_xup', 'signal_macdstoc_xdown']].to_string())
+    print(signals[['sk_slow','sd_slow', 'signal_xup', 'signal_xdown']].to_string())
 
     fig = plt.figure(figsize=(15, 20))
     fig.patch.set_facecolor('white')     # Set the outer colour to white
@@ -283,13 +283,13 @@ def plot_test(historic_data, title, isFile=False):
     #ax1.plot(df_stoc_xup_idx, signals.low[signals.stoc_xup_positions == 1.0], '^', markersize=7, color='m')
 
     # plot macdstoc xup / xdown
-    macdstoc_xup_idx = signals.ix[signals.macdstoc_xup_positions == 1.0].index
-    df_macdstoc_xup_idx = [signals.index.get_loc(idx) for idx in macdstoc_xup_idx]
-    ax1.plot(df_macdstoc_xup_idx, signals.low[signals.macdstoc_xup_positions == 1.0], '^', markersize=7, color='m')
+    xup_idx = signals.ix[signals.xup_positions == 1.0].index
+    df_xup_idx = [signals.index.get_loc(idx) for idx in xup_idx]
+    ax1.plot(df_xup_idx, signals.low[signals.xup_positions == 1.0], '^', markersize=7, color='m')
 
-    macdstoc_xdown_idx = signals.ix[signals.macdstoc_xdown_positions == 1.0].index
-    df_macdstoc_xdown_idx = [signals.index.get_loc(idx) for idx in macdstoc_xdown_idx]
-    ax1.plot(df_macdstoc_xdown_idx, signals.high[signals.macdstoc_xdown_positions == 1.0], 'v', markersize=7, color='r')
+    xdown_idx = signals.ix[signals.xdown_positions == 1.0].index
+    df_xdown_idx = [signals.index.get_loc(idx) for idx in xdown_idx]
+    ax1.plot(df_xdown_idx, signals.high[signals.xdown_positions == 1.0], 'v', markersize=7, color='r')
     
     ax1.xaxis.set_major_formatter(ticker.FuncFormatter(format_date))
     
@@ -352,8 +352,8 @@ def plot_test(historic_data, title, isFile=False):
     #ax4.fill_between(signals.index, 0, 5, facecolor='red', alpha=.2, interpolate=True)
     
     # plot macdstoc xup / xdown
-    ax4.plot(df_macdstoc_xup_idx, signals.sk_slow[signals.macdstoc_xup_positions == 1.0], '^', markersize=7, color='m')
-    ax4.plot(df_macdstoc_xdown_idx, signals.sk_slow[signals.macdstoc_xdown_positions == 1.0], 'v', markersize=7, color='r')    
+    ax4.plot(df_xup_idx, signals.sk_slow[signals.xup_positions == 1.0], '^', markersize=7, color='m')
+    ax4.plot(df_xdown_idx, signals.sk_slow[signals.xdown_positions == 1.0], 'v', markersize=7, color='r')    
     
     ax4.xaxis.set_major_formatter(ticker.FuncFormatter(format_date))
     ax4.axes.xaxis.set_visible(True)

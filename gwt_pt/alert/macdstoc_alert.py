@@ -59,7 +59,7 @@ CURRENCY_PAIR = ["EUR/USD",
                 #"USD/SEK", 
                 "USD/SGD"]
 
-CURRENCY_PAIR = ["EUR/USD"]
+#CURRENCY_PAIR = ["EUR/USD","USD/JPY"]
 METAL_PAIR = ["XAGUSD", "XAUUSD"]
 HKFE_PAIR = ["HSI"]
 
@@ -104,8 +104,10 @@ def gen_signal(historic_df):
     signals['signal_stoc_xdown'] = 0.0
     signals['signal_macd_xup'] = 0.0
     signals['signal_macd_xdown'] = 0.0
-    signals['signal_macdstoc_xup'] = 0.0
-    signals['signal_macdstoc_xdown'] = 0.0    
+    signals['signal_xup'] = 0.0
+    signals['signal_xdown'] = 0.0    
+    signals['signal_sxup'] = 0.0
+    signals['signal_sxdown'] = 0.0  
 
     ###############################################################################
     ## Create a 'signal' for Slow Stoc cross over <=25    
@@ -124,29 +126,49 @@ def gen_signal(historic_df):
     ###############################################################################
     ## Create a 'signal' for Macdstoc cross up <=5
     if (len(signals) >= MACDSTOC_WINDOW):
-        signals['signal_macdstoc_xup'][MACDSTOC_WINDOW:] = np.where(
+        signals['signal_xup'][MACDSTOC_WINDOW:] = np.where(
             (signals['sk_slow'][MACDSTOC_WINDOW:] > signals['sd_slow'][MACDSTOC_WINDOW:] + MACDSTOC_THRESHOLD)
             & (signals['sd_slow'][MACDSTOC_WINDOW:] <= MACDSTOC_LOWER_LIMIT)
             , 1.0, 0.0)
+            
+        signals['signal_sxup'][MACDSTOC_WINDOW:] = np.where(
+            (signals['sk_slow'][MACDSTOC_WINDOW:] == 100) 
+            & (signals['sd_slow'][MACDSTOC_WINDOW:] == 100)
+            , 1.0, 0.0)
     else:
-        signals['signal_macdstoc_xup'] = 0.0
+        signals['signal_xup'] = 0.0
+        signals['signal_sxup'] = 0.0
     
     ## Take the difference of the signals in order to generate actual trading orders
-    signals['macdstoc_xup_positions'] = signals['signal_macdstoc_xup'].diff()
-    signals.loc[signals.macdstoc_xup_positions == -1.0, 'macdstoc_xup_positions'] = 0.0
+    signals['xup_positions'] = signals['signal_xup'].diff()
+    signals.loc[signals.xup_positions == -1.0, 'xup_positions'] = 0.0
+    signals['sxup_positions'] = signals['signal_sxup'].diff()
+    signals.loc[signals.sxup_positions == -1.0, 'sxup_positions'] = 0.0
  
     ## Create a 'signal' for Macdstoc cross down >=95
     if (len(signals) >= MACDSTOC_WINDOW):
-        signals['signal_macdstoc_xdown'][MACDSTOC_WINDOW:] = np.where(
+        signals['signal_xdown'][MACDSTOC_WINDOW:] = np.where(
             (signals['sk_slow'][MACDSTOC_WINDOW:] < signals['sd_slow'][MACDSTOC_WINDOW:] - MACDSTOC_THRESHOLD)
             & (signals['sd_slow'][MACDSTOC_WINDOW:] >= MACDSTOC_UPPER_LIMIT)
             , 1.0, 0.0)
+            
+        signals['signal_sxdown'][MACDSTOC_WINDOW:] = np.where(
+            (signals['sk_slow'][MACDSTOC_WINDOW:] == 0) 
+            & (signals['sd_slow'][MACDSTOC_WINDOW:] == 0)
+            , 1.0, 0.0)
     else:
-        signals['signal_macdstoc_xdown'] = 0.0
+        signals['signal_xdown'] = 0.0
+        signals['signal_sxdown'] = 0.0
     
     ## Take the difference of the signals in order to generate actual trading orders
-    signals['macdstoc_xdown_positions'] = signals['signal_macdstoc_xdown'].diff()
-    signals.loc[signals.macdstoc_xdown_positions == -1.0, 'macdstoc_xdown_positions'] = 0.0
+    signals['xdown_positions'] = signals['signal_xdown'].diff()
+    signals.loc[signals.xdown_positions == -1.0, 'xdown_positions'] = 0.0
+    signals['sxdown_positions'] = signals['signal_sxdown'].diff()
+    signals.loc[signals.sxdown_positions == -1.0, 'sxdown_positions'] = 0.0
+    
+    ## Aggregrate the special case + normal case together
+    signals['xup_positions'] = signals['xup_positions'] + signals['sxup_positions']
+    signals['xdown_positions'] = signals['xdown_positions'] + signals['sxdown_positions']
     
     return signals
  
@@ -169,8 +191,8 @@ def get_alert(cur, title, historic_data):
     
     latest_signal = signals.tail(1)
     lts = latest_signal.index[0]
-    lxup = int(latest_signal.iloc[0]['macdstoc_xup_positions'])
-    lxdown = int(latest_signal.iloc[0]['macdstoc_xdown_positions'])
+    lxup = int(latest_signal.iloc[0]['xup_positions'])
+    lxdown = int(latest_signal.iloc[0]['xdown_positions'])
     lkslow = "%.2f" % latest_signal.iloc[0]['sk_slow']
     ldslow = "%.2f" % latest_signal.iloc[0]['sd_slow']
     
@@ -182,20 +204,6 @@ def get_alert(cur, title, historic_data):
     lemas = "%.5f" % latest_signal.iloc[0]['emaSmooth']
     lskslow = "%.2f" % latest_signal.iloc[0]['k_slow']
     lsdslow = "%.2f" % latest_signal.iloc[0]['d_slow']
-    
-    # Special Case 
-    # XUP sk_slow >  sd_slow, if n-1 9x/100, n 100/100, also treat as XUP
-    # XDOWN sk_slow <  sd_slow, if n-1 x/0, n 0/0, also treat as XDOWN
-    latest_2nd_signal = signals.tail(2).head(1)
-    if (latest_2nd_signal.iloc[0]['sk_slow'] < 100 and latest_2nd_signal.iloc[0]['sd_slow'] == 100 and
-        latest_signal.iloc[0]['sk_slow'] == 100 and latest_signal.iloc[0]['sd_slow'] == 100):
-        print("#### SPECIAL CASE XUP......")
-        lxup = 1
-
-    if (latest_2nd_signal.iloc[0]['sk_slow'] > 0 and latest_2nd_signal.iloc[0]['sd_slow'] == 0 and
-        latest_signal.iloc[0]['sk_slow'] == 0 and latest_signal.iloc[0]['sd_slow'] == 0):
-        print("#### SPECIAL CASE XDOWN.....")
-        lxdown = 1
     
     message_tmpl = "<b>" + u'\U0001F514' + "%s: \nMACDSTOC X%s</b>\n<i>at %s%s</i>"
     signals_list = ["<b>OPEN:</b> " + lopen
@@ -212,8 +220,8 @@ def get_alert(cur, title, historic_data):
     message_nil_tmpl = "%s: NO MACDSTOC Alert at %s"
     message = ""    
     
-    #signals_log = signals[['open','high','low','close','ema25','divergence','emaSmooth','macd','k_slow','d_slow','sk_slow','sd_slow','macdstoc_xup_positions','macdstoc_xdown_positions']].tail(20).to_string()
-    signals_log = signals[['k_slow','d_slow','sk_slow','sd_slow','macdstoc_xup_positions','macdstoc_xdown_positions']].tail(20).to_string()
+    #signals_log = signals[['open','high','low','close','ema25','divergence','emaSmooth','macd','k_slow','d_slow','sk_slow','sd_slow','xup_positions','xdown_positions']].tail(20).to_string()
+    signals_log = signals[['sk_slow','sd_slow','xup_positions','xdown_positions','sxup_positions','sxdown_positions']].tail(20).to_string()
     #print(">>>>>>>>>>>>>>>>>> Get DS Key " + cur) 
     ds = redis_pool.getV("DS:" + cur)
     if (not ds):
@@ -249,18 +257,18 @@ def get_alert(cur, title, historic_data):
     #print(signals.info())
     #print(signals.to_string())
     #print(signals.tail())
-    #print(signals[['sk_slow','sd_slow', 'macdstoc_xup_positions', 'macdstoc_xdown_positions']].tail(20).to_string())
+    #print(signals[['sk_slow','sd_slow', 'xup_positions', 'xdown_positions']].tail(20).to_string())
     print(signals_log)
 
 def update_latest_pos(cur, signals):
 
-    lsig = signals.loc[(signals['macdstoc_xup_positions'] == 1.0) | (signals['macdstoc_xdown_positions'] == 1.0)].tail(1)
+    lsig = signals.loc[(signals['xup_positions'] == 1.0) | (signals['xdown_positions'] == 1.0)].tail(1)
     lrec = lsig.iloc[0]
     #print(lrec)
     ltime = lsig.index[0]
     ltime = str(ltime).split()[0]
     message = ""
-    if (lrec['macdstoc_xup_positions']):
+    if (lrec['xup_positions']):
         message = ("%s XUP since %s" % (cur, ltime))
         redis_pool.setV("DS:" + cur, "XUP since %s" % ltime)
     else:
@@ -292,6 +300,7 @@ def alert_daily():
  
         historic_df = format_hist_df(hist_data)
         signals = gen_signal(historic_df)
+        print(signals[['sk_slow','sd_slow','xup_positions','xdown_positions','sxup_positions','sxdown_positions']].tail(20).to_string())
         dsl.append(update_latest_pos(cur, signals))
         
         print("Sleeping for " + str(SLEEP_PERIOD) + " seconds...")
